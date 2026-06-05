@@ -3,7 +3,7 @@ from utils.ui_helpers import GLOBAL_CSS
 
 st.set_page_config(
     page_title="Smart City Magdeburg",
-    page_icon="🏙️",
+    page_icon="utils/Wappen_Magdeburg.svg.png",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -38,7 +38,7 @@ with st.container():
     with brand_col:
         st.markdown("""
 <div class="topnav-brand">
-  <span class="brand-icon">🏙️</span>
+  <span class="brand-icon"></span>
   <div class="brand-text">
     <div class="brand-name">Magdeburg</div>
     <div class="brand-sub">Smart City Dashboard</div>
