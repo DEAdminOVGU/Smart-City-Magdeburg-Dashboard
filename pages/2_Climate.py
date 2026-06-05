@@ -2,15 +2,37 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from datetime import datetime
 
 from utils.data_loader import load_klima_monat, load_kiss
 from utils.chart_helpers import heatmap, line_chart
 from utils.constants import MONTHS_DE, MONTHS_DE_ORDER, MD_TEAL, MD_BLUE, MD_RED, PLOTLY_TEMPLATE
+from utils.ui_helpers import hero_stat
 
 st.title("Climate & Environment")
 st.caption("Sources: DWD Climate Data Center (station 03126 Magdeburg) · KISS-MD / Landeshauptstadt Magdeburg")
 
 df = load_klima_monat()
+
+# ── Hero KPI ──────────────────────────────────────────────────────────────────
+try:
+    _baseline = df[(df["year"] >= 1961) & (df["year"] <= 1990)]["MO_TT"].mean()
+    _yearly   = df[df["MO_TT"].notna()].groupby("year")["MO_TT"].mean()
+    _comp     = _yearly[_yearly.index < datetime.now().year]
+    _la, _pya = float(_comp.iloc[-1]) - _baseline, float(_comp.iloc[-2]) - _baseline
+    _yr       = int(_comp.index[-1])
+    _sign     = "+" if _la >= 0 else ""
+    _diff     = _la - _pya
+    st.markdown(hero_stat(
+        "🌡️",
+        f"{_sign}{_la:.1f} °C",
+        f"Annual temperature anomaly vs 1961–1990 baseline ({_baseline:.1f} °C) · {_yr}",
+        f"{'+' if _diff>=0 else ''}{_diff:.1f} °C vs {_yr-1}",
+        delta_positive=False,
+        color="#00897B",
+    ), unsafe_allow_html=True)
+except Exception:
+    pass
 
 # ── Chart 1: Temperature anomaly ─────────────────────────────────────────────
 st.subheader("Monthly Temperature Anomaly")

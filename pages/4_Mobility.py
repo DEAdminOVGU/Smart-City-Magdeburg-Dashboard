@@ -5,9 +5,37 @@ import plotly.graph_objects as go
 from utils.data_loader import load_kiss
 from utils.constants import MD_TEAL, MD_ORANGE, MD_BLUE, MD_RED, MONTHS_DE, MONTHS_DE_ORDER, PLOTLY_TEMPLATE
 from utils.chart_helpers import heatmap
+from utils.ui_helpers import hero_stat
 
 st.title("Mobility & Transport")
 st.caption("Sources: KISS-MD / Kraftfahrtbundesamt, MVB GmbH & Co. KG, Landeshauptstadt Magdeburg")
+
+# ── Hero KPI ──────────────────────────────────────────────────────────────────
+try:
+    _kfz    = load_kiss("verkehr/entwicklung-des-kraftfahrzeugbestandes-in-magdeburg.json")
+    _kfz    = _kfz.sort_values("Jahr")
+    _kly    = int(_kfz["Jahr"].max())
+    _kpy    = _kly - 1
+    _pkw_ly = float(_kfz[_kfz["Jahr"] == _kly]["var4"].values[0])
+    _pkw_py = float(_kfz[_kfz["Jahr"] == _kpy]["var4"].values[0])
+    _pop    = load_kiss("bevoelkerung/bevoelkerungsbestand-monatlich.json")
+    _pop    = _pop.sort_values("Jahr")
+    _p_ly   = float(_pop[_pop["Jahr"] == _kly]["var5"].mean())
+    _p_py   = float(_pop[_pop["Jahr"] == _kpy]["var5"].mean())
+    _cly    = round(_pkw_ly / _p_ly * 1000)
+    _cpy    = round(_pkw_py / _p_py * 1000)
+    _diff   = _cly - _cpy
+    _sign   = "+" if _diff >= 0 else ""
+    st.markdown(hero_stat(
+        "🚗",
+        str(_cly),
+        f"Cars per 1,000 residents · {_kly}",
+        f"{_sign}{_diff} vs {_kpy}",
+        delta_positive=False,
+        color="#6A1B9A",
+    ), unsafe_allow_html=True)
+except Exception:
+    pass
 
 # ── Chart 1: Vehicle fleet stacked area ──────────────────────────────────────
 st.subheader("Vehicle Fleet Composition")

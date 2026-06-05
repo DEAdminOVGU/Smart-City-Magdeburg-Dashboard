@@ -5,9 +5,31 @@ import plotly.express as px
 
 from utils.data_loader import load_kiss, load_mietspiegel
 from utils.constants import MONTHS_DE, MD_TEAL, MD_ORANGE, MD_BLUE, MD_RED, PLOTLY_TEMPLATE
+from utils.ui_helpers import hero_stat
 
 st.title("Population & Housing")
 st.caption("Sources: KISS-MD / Einwohnermeldeamt Magdeburg · Mietspiegel Magdeburg 2024")
+
+# ── Hero KPI ──────────────────────────────────────────────────────────────────
+try:
+    _df_p  = load_kiss("bevoelkerung/bevoelkerungsbestand-monatlich.json")
+    _df_p  = _df_p.sort_values("Jahr")
+    _cy    = int(_df_p["Jahr"].max())
+    _py    = _cy - 1
+    _cp    = int(_df_p[_df_p["Jahr"] == _cy]["var5"].mean())
+    _pp    = int(_df_p[_df_p["Jahr"] == _py]["var5"].mean())
+    _delta = _cp - _pp
+    _sign  = "+" if _delta >= 0 else ""
+    st.markdown(hero_stat(
+        "👥",
+        f"{_cp:,}".replace(",", "."),
+        f"Residents with primary registration (Hauptwohnsitz) · {_cy}",
+        f"{_sign}{_delta:,} vs {_py}".replace(",", "."),
+        delta_positive=_delta >= 0,
+        color="#1565C0",
+    ), unsafe_allow_html=True)
+except Exception:
+    pass
 
 # ── Chart 1: Population time series ──────────────────────────────────────────
 st.subheader("Population Development")

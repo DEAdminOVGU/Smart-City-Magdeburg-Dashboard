@@ -4,9 +4,30 @@ import plotly.graph_objects as go
 
 from utils.data_loader import load_kiss, load_steuereinnahmen
 from utils.constants import MD_TEAL, MD_ORANGE, MD_BLUE, MD_RED, MD_GREY, PLOTLY_TEMPLATE
+from utils.ui_helpers import hero_stat
 
 st.title("Economy & Finance")
 st.caption("Sources: Landeshauptstadt Magdeburg (Steuerstatistik) · KISS-MD / Statistisches Amt")
+
+# ── Hero KPI ──────────────────────────────────────────────────────────────────
+try:
+    _tax    = load_steuereinnahmen()
+    _cols   = ["gewerbesteuer", "gemeindeanteil-an-der-einkommensteuer",
+               "grundsteuer_b", "gemeindeanteil-an-der-umsatzsteuer"]
+    _t24    = sum(float(_tax[_tax["jahr"] == 2024].iloc[0].get(c, 0) or 0) for c in _cols)
+    _t23    = sum(float(_tax[_tax["jahr"] == 2023].iloc[0].get(c, 0) or 0) for c in _cols)
+    _pct    = (_t24 - _t23) / _t23 * 100
+    _sign   = "+" if _pct >= 0 else ""
+    st.markdown(hero_stat(
+        "💶",
+        f"€{_t24/1e6:.0f}M",
+        "Total municipal tax revenue · 2024",
+        f"{_sign}{_pct:.1f}% vs 2023",
+        delta_positive=_pct >= 0,
+        color="#2E7D32",
+    ), unsafe_allow_html=True)
+except Exception:
+    pass
 
 # ── Chart 1: Tax revenue ──────────────────────────────────────────────────────
 st.subheader("Municipal Tax Revenue")
