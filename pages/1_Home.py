@@ -12,17 +12,13 @@ from utils.constants import LAT, LON, MONTHS_DE
 
 # ── Hero banner ───────────────────────────────────────────────────────────────
 st.markdown("""
-<div style="margin-bottom:28px;">
-  <div style="font-size:0.8rem;font-weight:700;color:#007A6E;text-transform:uppercase;
-              letter-spacing:0.12em;margin-bottom:4px;">Smart City Dashboard</div>
-  <h1 style="font-size:2.6rem!important;font-weight:900!important;
-             color:#1A1A1A!important;line-height:1.1;margin:0 0 8px 0;">
-    Magdeburg in Zahlen
-  </h1>
-  <p style="font-size:1.05rem;color:#666;max-width:620px;margin:0;">
-    Live city pulse and historical trends for Magdeburg —
-    Saxony-Anhalt's capital on the Elbe.
-  </p>
+<div class="page-hero">
+    <div class="page-hero__eyebrow">Smart City Dashboard</div>
+    <h1 class="page-hero__title">Magdeburg in Zahlen</h1>
+    <p class="page-hero__text">
+        Live city pulse and historical trends for Magdeburg —
+        Saxony-Anhalt's capital on the Elbe.
+    </p>
 </div>
 """, unsafe_allow_html=True)
 
