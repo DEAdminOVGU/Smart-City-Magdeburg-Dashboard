@@ -13,7 +13,7 @@ st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
 pages = {
     "Dashboard": [
         st.Page("pages/1_Home.py",
-                title="Overview",                icon="🏠"),
+                title="Home Page",                icon="🏠"),
         st.Page("pages/2_Climate.py",
                 title="Climate & Environment",   icon="🌡️",  url_path="climate"),
         st.Page("pages/3_Population_Housing.py",
@@ -22,6 +22,10 @@ pages = {
                 title="Mobility & Transport",    icon="🚌",  url_path="mobility"),
         st.Page("pages/5_Economy.py",
                 title="Economy & Finance",       icon="💶",  url_path="economy"),
+        st.Page("pages/6_Health.py",
+                title="Health & Safety",         icon="🏥",  url_path="health"),
+        st.Page("pages/7_Education.py",
+                title="Education & Culture",     icon="🎓",  url_path="education"),
     ]
 }
 
@@ -33,7 +37,7 @@ with st.container():
     # Sentinel lets CSS :has() target only this container for sticky positioning
     st.markdown('<span class="nav-sentinel"></span>', unsafe_allow_html=True)
 
-    brand_col, c1, c2, c3, c4, c5 = st.columns([2.5, 1, 1, 1, 1, 1])
+    brand_col, c1, c2, c3, c4, c5, c6, c7 = st.columns([2, 1, 1, 1, 1, 1, 1, 1])
 
     with brand_col:
         st.markdown("""
@@ -45,10 +49,12 @@ with st.container():
   </div>
 </div>""", unsafe_allow_html=True)
 
-    with c1: st.page_link("pages/1_Home.py",                label="Overview",    icon="🏠")
+    with c1: st.page_link("pages/1_Home.py",                label="Home Page",    icon="🏠")
     with c2: st.page_link("pages/2_Climate.py",             label="Climate",     icon="🌡️")
     with c3: st.page_link("pages/3_Population_Housing.py",  label="Population",  icon="🏘️")
     with c4: st.page_link("pages/4_Mobility.py",            label="Mobility",    icon="🚌")
     with c5: st.page_link("pages/5_Economy.py",             label="Economy",     icon="💶")
+    with c6: st.page_link("pages/6_Health.py",              label="Health",      icon="🏥")
+    with c7: st.page_link("pages/7_Education.py",           label="Education",   icon="🎓")
 
 pg.run()

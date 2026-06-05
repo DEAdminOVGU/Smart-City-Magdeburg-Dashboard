@@ -24,11 +24,29 @@ def hero_stat(icon: str, value: str, description: str,
 
 def topic_card(icon: str, title: str, value: str, unit: str,
                delta_text: str, delta_positive: bool,
-               year: str, color: str = "#007A6E") -> str:
+               year: str, color: str = "#007A6E",
+               status: str = None, subtext: str = None) -> str:
     """Topic card for the Home page grid."""
     arrow = "↑" if delta_positive else "↓"
     delta_color = "#1B5E20" if delta_positive else "#B71C1C"
     delta_bg = "#E8F5E9" if delta_positive else "#FFEBEE"
+    status_dot_map = {"good": "#22C55E", "watch": "#F59E0B", "alert": "#EF4444"}
+    status_html = ""
+    if status and status in status_dot_map:
+        dot_color = status_dot_map[status]
+        status_label = {"good": "Good", "watch": "Watch", "alert": "Alert"}[status]
+        status_html = (
+            f'<span style="display:inline-flex;align-items:center;gap:4px;'
+            f'font-size:0.68rem;font-weight:700;color:{dot_color};margin-left:6px;">'
+            f'<span style="width:7px;height:7px;border-radius:50%;background:{dot_color};'
+            f'display:inline-block;"></span>{status_label}</span>'
+        )
+    subtext_html = ""
+    if subtext:
+        subtext_html = (
+            f'<div style="font-size:0.72rem;color:#94a3b8;margin-top:4px;'
+            f'line-height:1.4;">{subtext}</div>'
+        )
     return f"""
 <div style="background:#fff;border-radius:14px;padding:22px 18px;
             box-shadow:0 2px 16px rgba(0,0,0,0.07);
@@ -39,13 +57,14 @@ def topic_card(icon: str, title: str, value: str, unit: str,
                  text-transform:uppercase;letter-spacing:0.06em;">{year}</span>
   </div>
   <div style="font-size:0.7rem;font-weight:800;color:#999;text-transform:uppercase;
-              letter-spacing:0.12em;margin-bottom:5px;">{title}</div>
+              letter-spacing:0.12em;margin-bottom:5px;">{title}{status_html}</div>
   <div style="font-size:2rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{value}</div>
   <div style="font-size:0.78rem;color:#bbb;margin-top:3px;margin-bottom:14px;">{unit}</div>
   <div style="display:inline-block;background:{delta_bg};color:{delta_color};
               border-radius:16px;padding:3px 12px;font-size:0.76rem;font-weight:700;">
     {arrow}&nbsp;{delta_text}
   </div>
+  {subtext_html}
 </div>
 """
 
@@ -62,6 +81,29 @@ def live_card(icon: str, title: str, value: str, subtitle: str,
               letter-spacing:0.1em;margin-bottom:4px;">{title}</div>
   <div style="font-size:1.8rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{value}</div>
   <div style="font-size:0.78rem;color:#999;margin-top:4px;">{subtitle}</div>
+</div>
+"""
+
+
+def section_header(label: str, color: str = "#007A6E") -> str:
+    """Styled section divider with a coloured left-bar."""
+    return f"""
+<div style="display:flex;align-items:center;gap:12px;margin:28px 0 16px 0;">
+  <div style="width:4px;height:20px;background:{color};border-radius:2px;flex-shrink:0;"></div>
+  <div style="font-size:0.7rem;font-weight:800;color:#64748b;
+              text-transform:uppercase;letter-spacing:0.16em;white-space:nowrap;">{label}</div>
+  <div style="flex:1;height:1px;background:#e2e8f0;"></div>
+</div>
+"""
+
+
+def insight_box(text: str) -> str:
+    """Plain-language insight callout shown below a chart."""
+    return f"""
+<div style="background:#f0faf8;border-left:4px solid #007A6E;border-radius:0 10px 10px 0;
+            padding:11px 18px;margin:6px 0 22px 0;
+            font-size:0.88rem;color:#1e4e47;line-height:1.55;font-weight:500;">
+  \U0001f4a1 {text}
 </div>
 """
 
@@ -197,6 +239,16 @@ header             { visibility: hidden; }
   { color:#6A1B9A!important; border-bottom-color:#6A1B9A!important; background:#f4ecfb!important; }
 [data-testid="stPageLink"]:nth-of-type(5) a:hover
   { color:#2E7D32!important; border-bottom-color:#2E7D32!important; background:#eaf4ea!important; }
+[data-testid="stPageLink"]:nth-of-type(6) a:hover
+  { color:#C0392B!important; border-bottom-color:#C0392B!important; background:#fdf0ef!important; }
+[data-testid="stPageLink"]:nth-of-type(7) a:hover
+  { color:#E65100!important; border-bottom-color:#E65100!important; background:#fff3e0!important; }
+
+/* ── Active state tabs 6–7 (Health/Education) ─────────── */
+[data-testid="stPageLink"]:nth-of-type(6) a[aria-current="page"]
+  { color:#C0392B!important; border-bottom-color:#C0392B!important; background:#fdf0ef!important; }
+[data-testid="stPageLink"]:nth-of-type(7) a[aria-current="page"]
+  { color:#E65100!important; border-bottom-color:#E65100!important; background:#fff3e0!important; }
 
 /* ── Typography ─────────────────────────────────────────── */
 h1 { font-size: 2.1rem !important; font-weight: 800 !important; color: #1A1A1A !important; }
