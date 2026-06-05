@@ -1,0 +1,405 @@
+import json
+import os
+import streamlit as st
+import streamlit.components.v1 as components
+import folium
+from folium.plugins import MarkerCluster, HeatMap
+import plotly.graph_objects as go
+import pandas as pd
+
+from utils.live_api   import fetch_weather, fetch_elbe_level
+from utils.overpass   import fetch_parking, fetch_charging, fetch_transit_stops
+from utils.ui_helpers import section_header, live_card
+from utils.constants  import PLOTLY_TEMPLATE
+
+NAV_ORANGE = "#D4481C"
+NAV_AMBER  = "#E8650B"
+
+# ── Page header ───────────────────────────────────────────────────────────────
+st.title("City Navigation")
+st.markdown(
+    "<p style='font-size:0.97rem;color:#64748b;max-width:680px;margin:-6px 0 20px 0;'>"
+    "Explore Magdeburg's transport network — parking, EV charging, public transit, "
+    "and traffic accident hotspots on an interactive map."
+    "</p>",
+    unsafe_allow_html=True,
+)
+
+# ── Live data ─────────────────────────────────────────────────────────────────
+weather  = fetch_weather()
+elbe     = fetch_elbe_level()
+
+temp     = weather.get("temperature")   if weather else None
+wind_spd = weather.get("wind_speed")    if weather else None
+cond     = weather.get("condition", "") if weather else ""
+precip   = weather.get("precipitation") if weather else None
+elbe_val = elbe.get("value")            if elbe    else None
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 1: TRAFFIC ALERTS
+# ─────────────────────────────────────────────────────────────────────────────
+alerts = []
+
+if temp is not None and temp < 0:
+    alerts.append(("🧊 Black Ice Risk",
+                   f"Temperature is {temp:.0f}°C — black ice possible on bridges and shaded roads. "
+                   "Reduce speed and allow extra braking distance.", "warning"))
+elif temp is not None and temp < 3 and precip is not None and precip > 0:
+    alerts.append(("⚠️ Slippery Roads",
+                   f"Near-freezing temperatures ({temp:.0f}°C) with precipitation. "
+                   "Roads may be slippery — drive carefully.", "warning"))
+
+if cond and "fog" in cond.lower():
+    alerts.append(("🌫️ Reduced Visibility",
+                   "Fog reported — use low beam headlights and increase following distance. "
+                   "Check MVB for tram and bus delays.", "warning"))
+
+if wind_spd is not None and wind_spd > 60:
+    alerts.append(("💨 Strong Wind",
+                   f"Wind gusts of {wind_spd:.0f} km/h. Take extra care on the Elbe bridges "
+                   "and avoid cycling on exposed routes.", "warning"))
+
+if elbe_val is not None and elbe_val > 400:
+    alerts.append(("🌊 Riverside Roads Affected",
+                   f"Elbe at {elbe_val:.0f} cm — low-lying riverside roads near Strombrücke "
+                   "may be impassable. Check before travelling.", "error"))
+
+if cond and any(k in cond.lower() for k in ["rain", "hail", "sleet"]):
+    alerts.append(("🌧️ Wet Road Conditions",
+                   "Rain or precipitation active — stopping distances are longer. "
+                   "Cyclists should use lights and avoid puddles near drains.", "info"))
+
+if alerts:
+    for label, msg, kind in alerts:
+        if kind == "error":
+            st.error(f"**{label}** — {msg}")
+        elif kind == "warning":
+            st.warning(f"**{label}** — {msg}")
+        else:
+            st.info(f"**{label}** — {msg}")
+else:
+    st.success("✅ **Traffic conditions normal** — no active weather or road alerts for Magdeburg.")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 2: FETCH MAP DATA
+# ─────────────────────────────────────────────────────────────────────────────
+st.markdown(section_header("Interactive City Map", color=NAV_ORANGE), unsafe_allow_html=True)
+st.caption(
+    "Layers: district boundaries · parking · EV charging · public transit stops · accident hotspots. "
+    "Use the layer control (top-right) to toggle layers on/off."
+)
+
+with st.spinner("Loading map data from OpenStreetMap…"):
+    parking_pts  = fetch_parking()
+    charging_pts = fetch_charging()
+    transit_pts  = fetch_transit_stops()
+
+# Load accident GeoJSON
+accident_pts = []
+_acc_path = os.path.join(os.path.dirname(__file__), "..", "data", "Unfaelle", "Magdeburg_Unfallatlas.geojson")
+try:
+    with open(os.path.normpath(_acc_path), encoding="utf-8") as f:
+        _acc_geojson = json.load(f)
+    for feat in _acc_geojson.get("features", []):
+        props = feat.get("properties", {})
+        lat = props.get("lat") or props.get("LAT") or props.get("YLAT")
+        lon = props.get("lon") or props.get("LON") or props.get("XLON")
+        if lat and lon:
+            try:
+                accident_pts.append({
+                    "lat": float(lat), "lon": float(lon),
+                    "year": int(props.get("UJAHR", 0)),
+                    "category": int(props.get("UKATEGORIE", 0)),
+                    "rad": int(props.get("IstRad", 0)),
+                    "pkw": int(props.get("IstPKW", 0)),
+                    "fuss": int(props.get("IstFuss", 0)),
+                    "krad": int(props.get("IstKrad", 0)),
+                })
+            except (TypeError, ValueError):
+                pass
+except Exception:
+    pass
+
+# Load district boundaries
+_stadtteile_path = os.path.join(os.path.dirname(__file__), "..", "data", "Stadtteile", "Stadtteile.geojson")
+stadtteile_geojson = None
+try:
+    with open(os.path.normpath(_stadtteile_path), encoding="utf-8") as f:
+        stadtteile_geojson = json.load(f)
+except Exception:
+    pass
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BUILD FOLIUM MAP
+# ─────────────────────────────────────────────────────────────────────────────
+m = folium.Map(location=[52.131, 11.640], zoom_start=12, tiles="CartoDB positron")
+
+# Layer 1: District boundaries
+if stadtteile_geojson:
+    fg_districts = folium.FeatureGroup(name="🏘️ Districts", show=True)
+    folium.GeoJson(
+        stadtteile_geojson,
+        style_function=lambda f: {
+            "fillColor": "transparent",
+            "color": "#007A6E",
+            "weight": 1.5,
+            "fillOpacity": 0,
+        },
+        tooltip=folium.GeoJsonTooltip(fields=["name"], aliases=["District:"]),
+    ).add_to(fg_districts)
+    fg_districts.add_to(m)
+
+# Layer 2: Transit stops
+fg_transit = folium.FeatureGroup(name="🚌 Transit Stops", show=False)
+transit_cluster = MarkerCluster(
+    options={"maxClusterRadius": 40, "disableClusteringAtZoom": 15}
+)
+for s in transit_pts:
+    color = "#009E3D" if s["type"] == "bus" else "#0057A8"
+    icon_char = "🚌" if s["type"] == "bus" else "🚃"
+    ref_str = f" ({s['ref']})" if s.get("ref") else ""
+    folium.CircleMarker(
+        location=[s["lat"], s["lon"]],
+        radius=5,
+        color=color,
+        fill=True,
+        fill_color=color,
+        fill_opacity=0.8,
+        popup=folium.Popup(
+            f"<b>{icon_char} {s['name']}{ref_str}</b><br>Type: {s['type'].title()} stop",
+            max_width=200,
+        ),
+        tooltip=s["name"],
+    ).add_to(transit_cluster)
+transit_cluster.add_to(fg_transit)
+fg_transit.add_to(m)
+
+# Layer 3: Parking
+fg_parking = folium.FeatureGroup(name="🅿️ Parking", show=False)
+parking_cluster = MarkerCluster(
+    options={"maxClusterRadius": 50, "disableClusteringAtZoom": 15}
+)
+for p in parking_pts:
+    cap_str = f"<br>Capacity: {p['capacity']}" if p.get("capacity") else ""
+    typ_str = f"<br>Type: {p['type'].replace('_',' ').title()}" if p.get("type") else ""
+    folium.CircleMarker(
+        location=[p["lat"], p["lon"]],
+        radius=6,
+        color="#1565C0",
+        fill=True,
+        fill_color="#1565C0",
+        fill_opacity=0.7,
+        popup=folium.Popup(
+            f"<b>🅿️ {p['name']}</b>{cap_str}{typ_str}",
+            max_width=220,
+        ),
+        tooltip=f"🅿️ {p['name']}",
+    ).add_to(parking_cluster)
+parking_cluster.add_to(fg_parking)
+fg_parking.add_to(m)
+
+# Layer 4: EV Charging
+fg_charging = folium.FeatureGroup(name="⚡ EV Charging", show=False)
+for c in charging_pts:
+    op_str  = f"<br>Operator: {c['operator']}" if c.get("operator") else ""
+    soc_str = f"<br>Sockets: {c['sockets']}"   if c.get("sockets")  else ""
+    fee_str = f"<br>Fee: {c['fee']}"            if c.get("fee")      else ""
+    folium.Marker(
+        location=[c["lat"], c["lon"]],
+        popup=folium.Popup(
+            f"<b>⚡ {c['name']}</b>{op_str}{soc_str}{fee_str}",
+            max_width=220,
+        ),
+        tooltip=f"⚡ {c['name']}",
+        icon=folium.DivIcon(
+            html=(
+                '<div style="background:#F59E0B;border:2px solid #92400E;'
+                'border-radius:50%;width:22px;height:22px;display:flex;'
+                'align-items:center;justify-content:center;'
+                'font-size:13px;font-weight:900;color:#fff;">⚡</div>'
+            ),
+            icon_size=(22, 22),
+            icon_anchor=(11, 11),
+        ),
+    ).add_to(fg_charging)
+fg_charging.add_to(m)
+
+# Layer 5: Accident hotspots (clustered red markers)
+if accident_pts:
+    fg_accidents = folium.FeatureGroup(name="🚨 Accident Hotspots", show=False)
+    acc_cluster = MarkerCluster(
+        options={"maxClusterRadius": 35, "disableClusteringAtZoom": 15}
+    )
+    cat_label = {1: "Fatal", 2: "Serious injury", 3: "Minor injury"}
+    for a in accident_pts:
+        cat = cat_label.get(a["category"], "Accident")
+        involved = []
+        if a["rad"]:  involved.append("cyclist")
+        if a["pkw"]:  involved.append("car")
+        if a["fuss"]: involved.append("pedestrian")
+        if a["krad"]: involved.append("motorcycle")
+        inv_str = ", ".join(involved) if involved else "vehicle"
+        folium.CircleMarker(
+            location=[a["lat"], a["lon"]],
+            radius=4,
+            color="#C0392B",
+            fill=True,
+            fill_color="#C0392B",
+            fill_opacity=0.75,
+            popup=folium.Popup(
+                f"<b>🚨 {cat}</b><br>Year: {a['year']}<br>Involved: {inv_str}",
+                max_width=200,
+            ),
+            tooltip=f"Accident {a['year']} — {cat}",
+        ).add_to(acc_cluster)
+    acc_cluster.add_to(fg_accidents)
+    fg_accidents.add_to(m)
+
+    # Layer 6: Accident heatmap
+    fg_heatmap = folium.FeatureGroup(name="🔥 Accident Heatmap", show=False)
+    heat_data = [[a["lat"], a["lon"]] for a in accident_pts]
+    HeatMap(
+        heat_data,
+        min_opacity=0.3,
+        radius=14,
+        blur=10,
+        gradient={"0.4": "#ffd700", "0.65": "#ff8c00", "1": "#c0392b"},
+    ).add_to(fg_heatmap)
+    fg_heatmap.add_to(m)
+
+folium.LayerControl(collapsed=False).add_to(m)
+
+components.html(m._repr_html_(), height=560, scrolling=False)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 3: STATS STRIP
+# ─────────────────────────────────────────────────────────────────────────────
+st.markdown(section_header("Infrastructure at a Glance", color=NAV_ORANGE), unsafe_allow_html=True)
+
+stat_cols = st.columns(4)
+
+with stat_cols[0]:
+    st.markdown(live_card(
+        "🅿️", "Parking Locations",
+        str(len(parking_pts)) if parking_pts else "—",
+        "OSM locations in city bounds",
+        status_color="#1565C0",
+    ), unsafe_allow_html=True)
+
+with stat_cols[1]:
+    st.markdown(live_card(
+        "⚡", "EV Charging Stations",
+        str(len(charging_pts)) if charging_pts else "—",
+        "Public chargers mapped in OSM",
+        status_color="#F59E0B",
+    ), unsafe_allow_html=True)
+
+with stat_cols[2]:
+    bus_count  = sum(1 for s in transit_pts if s["type"] == "bus")
+    tram_count = sum(1 for s in transit_pts if s["type"] == "tram")
+    st.markdown(live_card(
+        "🚌", "Transit Stops",
+        str(len(transit_pts)) if transit_pts else "—",
+        f"{bus_count} bus · {tram_count} tram",
+        status_color="#009E3D",
+    ), unsafe_allow_html=True)
+
+with stat_cols[3]:
+    if accident_pts:
+        max_year = max(a["year"] for a in accident_pts)
+        yr_count = sum(1 for a in accident_pts if a["year"] == max_year)
+        st.markdown(live_card(
+            "🚨", "Recorded Accidents",
+            f"{yr_count:,}".replace(",", "."),
+            f"Traffic incidents in {max_year}",
+            status_color="#C0392B",
+        ), unsafe_allow_html=True)
+    else:
+        st.markdown(live_card(
+            "🚨", "Recorded Accidents", "—",
+            "Unfallatlas data unavailable",
+            status_color="#C0392B",
+        ), unsafe_allow_html=True)
+
+st.caption("Sources: OpenStreetMap / Overpass API (parking, charging, transit) · Unfallatlas (accidents)")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 4: ACCIDENT INSIGHTS
+# ─────────────────────────────────────────────────────────────────────────────
+if accident_pts:
+    st.markdown(section_header("Traffic Accident Analysis", color=NAV_ORANGE), unsafe_allow_html=True)
+
+    df_acc = pd.DataFrame(accident_pts)
+
+    chart_col, donut_col = st.columns([3, 2])
+
+    with chart_col:
+        st.caption("Reported accidents by year")
+        yr_counts = df_acc.groupby("year").size().reset_index(name="count").sort_values("year")
+        fig_bar = go.Figure(go.Bar(
+            x=yr_counts["year"], y=yr_counts["count"],
+            marker_color=NAV_ORANGE, opacity=0.85,
+            hovertemplate="%{x}: %{y} accidents<extra></extra>",
+        ))
+        fig_bar.update_layout(
+            template=PLOTLY_TEMPLATE,
+            xaxis_title="Year",
+            yaxis_title="Accidents",
+            yaxis=dict(tickformat=",d"),
+            margin=dict(l=50, r=20, t=20, b=40),
+            height=300,
+        )
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+    with donut_col:
+        st.caption("Accident involvement by road user type")
+        involved_totals = {
+            "Car (PKW)":       int(df_acc["pkw"].sum()),
+            "Cyclist":         int(df_acc["rad"].sum()),
+            "Pedestrian":      int(df_acc["fuss"].sum()),
+            "Motorbike/Krad":  int(df_acc["krad"].sum()),
+        }
+        labels = list(involved_totals.keys())
+        values = list(involved_totals.values())
+        colours = [NAV_ORANGE, "#1565C0", "#2E7D32", "#6A1B9A"]
+        fig_donut = go.Figure(go.Pie(
+            labels=labels, values=values,
+            hole=0.45,
+            marker=dict(colors=colours),
+            hovertemplate="%{label}: %{value} (%{percent})<extra></extra>",
+            textposition="outside",
+            textfont=dict(size=11),
+        ))
+        fig_donut.update_layout(
+            template=PLOTLY_TEMPLATE,
+            showlegend=False,
+            margin=dict(l=0, r=0, t=20, b=20),
+            height=300,
+        )
+        st.plotly_chart(fig_donut, use_container_width=True)
+
+    # Severity breakdown
+    sev_map = {1: "Fatal", 2: "Serious injury", 3: "Minor injury"}
+    df_acc["severity"] = df_acc["category"].map(sev_map).fillna("Unknown")
+    sev_counts = df_acc["severity"].value_counts()
+
+    sev_html = "".join(
+        f'<span style="background:#f1f5f9;border-radius:8px;padding:4px 12px;margin:3px;'
+        f'font-size:0.78rem;font-weight:700;color:#374151;display:inline-block;">'
+        f'{sev} &nbsp;<span style="color:{NAV_ORANGE};">{cnt:,}</span></span>'.replace(",", ".")
+        for sev, cnt in sev_counts.items()
+    )
+    st.markdown(
+        f'<div style="margin:4px 0 6px 0;">{sev_html}</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("""
+<div style="background:#fff7f5;border-left:4px solid #D4481C;border-radius:0 10px 10px 0;
+            padding:11px 18px;margin:6px 0 12px 0;font-size:0.88rem;color:#7f1d1d;
+            line-height:1.55;font-weight:500;">
+  💡 Cyclist involvement is disproportionately high relative to modal share.
+  The Elbe bridge approaches and intersections in the city centre are recurrent hotspot zones.
+  Check the heatmap layer above to identify specific high-risk locations.
+</div>
+""", unsafe_allow_html=True)
+    st.caption("Source: Unfallatlas / Statistische Ämter — road traffic accidents reported to police")

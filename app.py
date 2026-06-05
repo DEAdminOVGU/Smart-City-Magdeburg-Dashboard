@@ -13,7 +13,9 @@ st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
 pages = {
     "Dashboard": [
         st.Page("pages/1_Home.py",
-                title="Home Page",                icon="🏠"),
+                title="Overview",                icon="🏠"),
+        st.Page("pages/CityNav.py",
+                title="City Navigation",         icon="🗺️",  url_path="navigation"),
         st.Page("pages/2_Climate.py",
                 title="Climate & Environment",   icon="🌡️",  url_path="climate"),
         st.Page("pages/3_Population_Housing.py",
@@ -32,12 +34,10 @@ pages = {
 pg = st.navigation(pages, position="hidden")
 
 # ── Horizontal top nav ────────────────────────────────────────────────────────
-# Wrap in a container so the single stVerticalBlock gets the sticky CSS applied.
 with st.container():
-    # Sentinel lets CSS :has() target only this container for sticky positioning
     st.markdown('<span class="nav-sentinel"></span>', unsafe_allow_html=True)
 
-    brand_col, c1, c2, c3, c4, c5, c6, c7 = st.columns([2, 1, 1, 1, 1, 1, 1, 1])
+    brand_col, c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([2, 1, 1, 1, 1, 1, 1, 1, 1])
 
     with brand_col:
         st.markdown("""
@@ -49,12 +49,13 @@ with st.container():
   </div>
 </div>""", unsafe_allow_html=True)
 
-    with c1: st.page_link("pages/1_Home.py",                label="Home Page",    icon="🏠")
-    with c2: st.page_link("pages/2_Climate.py",             label="Climate",     icon="🌡️")
-    with c3: st.page_link("pages/3_Population_Housing.py",  label="Population",  icon="🏘️")
-    with c4: st.page_link("pages/4_Mobility.py",            label="Mobility",    icon="🚌")
-    with c5: st.page_link("pages/5_Economy.py",             label="Economy",     icon="💶")
-    with c6: st.page_link("pages/6_Health.py",              label="Health",      icon="🏥")
-    with c7: st.page_link("pages/7_Education.py",           label="Education",   icon="🎓")
+    with c1: st.page_link("pages/1_Home.py",                label="Overview",    icon="🏠")
+    with c2: st.page_link("pages/CityNav.py",               label="Navigation",  icon="🗺️")
+    with c3: st.page_link("pages/2_Climate.py",             label="Climate",     icon="🌡️")
+    with c4: st.page_link("pages/3_Population_Housing.py",  label="Population",  icon="🏘️")
+    with c5: st.page_link("pages/4_Mobility.py",            label="Mobility",    icon="🚌")
+    with c6: st.page_link("pages/5_Economy.py",             label="Economy",     icon="💶")
+    with c7: st.page_link("pages/6_Health.py",              label="Health",      icon="🏥")
+    with c8: st.page_link("pages/7_Education.py",           label="Education",   icon="🎓")
 
 pg.run()
