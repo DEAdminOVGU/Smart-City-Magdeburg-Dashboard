@@ -10,16 +10,6 @@ from utils.data_loader import (
 from utils.ui_helpers import topic_card, live_card
 from utils.constants import LAT, LON, MONTHS_DE
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown(f'<div class="sidebar-footer">Live data as of {datetime.now().strftime("%H:%M")}</div>',
-                unsafe_allow_html=True)
-    if st.button("🔄 Refresh Live Data", use_container_width=True):
-        fetch_weather.clear()
-        fetch_elbe_level.clear()
-        fetch_air_quality.clear()
-        st.rerun()
-
 # ── Hero banner ───────────────────────────────────────────────────────────────
 st.markdown("""
 <div style="margin-bottom:28px;">
@@ -37,7 +27,15 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Live data strip ───────────────────────────────────────────────────────────
-st.markdown("#### 🔴 Live Indicators")
+_hcol1, _hcol2 = st.columns([6, 1])
+with _hcol1:
+    st.markdown("#### 🔴 Live Indicators")
+with _hcol2:
+    if st.button("🔄 Refresh", use_container_width=True):
+        fetch_weather.clear()
+        fetch_elbe_level.clear()
+        fetch_air_quality.clear()
+        st.rerun()
 
 weather = fetch_weather()
 elbe    = fetch_elbe_level()

@@ -68,151 +68,142 @@ def live_card(icon: str, title: str, value: str, subtitle: str,
 
 GLOBAL_CSS = """
 <style>
-/* ── Global chrome ─────────────────────────────────────────── */
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
+/* ── Streamlit chrome ──────────────────────────────────────── */
+#MainMenu          { visibility: hidden; }
+footer             { visibility: hidden; }
+header             { visibility: hidden; }
+[data-testid="stSidebar"]         { display: none !important; }
+[data-testid="collapsedControl"]  { display: none !important; }
+[data-testid="stSidebarNav"]      { display: none !important; }
+.nav-sentinel      { display: none; }
 
+/* ── Main content padding ───────────────────────────────────── */
 .block-container {
-    padding-top: 1.5rem !important;
-    padding-bottom: 2rem !important;
-    max-width: 1100px;
+    padding-top: 0.5rem !important;
+    padding-bottom: 2.5rem !important;
+    max-width: 1160px;
 }
 
-h1 { font-size: 2.1rem !important; font-weight: 800 !important; color: #1A1A1A !important; }
-h2 { font-size: 1.35rem !important; font-weight: 700 !important; color: #2A2A2A !important; }
-h3 { font-size: 1.1rem !important; font-weight: 700 !important; }
-
-.js-plotly-plot { border-radius: 12px; }
-hr { border-color: #e8ecec !important; }
-.stCaption, caption { color: #999 !important; font-size: 0.78rem !important; }
-
-/* ── Sidebar shell ─────────────────────────────────────────── */
-[data-testid="stSidebar"] {
+/* ── Nav container visual styling (non-sticky, part of normal flow) ───────── */
+[data-testid="stVerticalBlock"] .nav-sentinel {
+    display: none !important;
+}
+/* Give the columns row containing the nav a bottom border */
+[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"]) {
+    border-bottom: 2px solid #eef0f2 !important;
+    padding-bottom: 2px !important;
+    margin-bottom: 8px !important;
     background: #ffffff !important;
-    border-right: 1px solid #e8ecec !important;
-}
-[data-testid="stSidebar"] > div:first-child {
-    padding: 0 !important;
 }
 
-/* Hide the auto-generated stSidebarNav — we use st.page_link() tiles instead */
-[data-testid="stSidebarNav"] { display: none !important; }
+/* ── Brand block ──────────────────────────────────────────── */
+.topnav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 4px;
+}
+.brand-icon { font-size: 1.6rem; line-height: 1; }
+.brand-name {
+    font-size: 1.05rem;
+    font-weight: 900;
+    color: #007A6E;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+}
+.brand-sub {
+    font-size: 0.6rem;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.13em;
+    font-weight: 600;
+}
 
-/* ── Navigation tile base ──────────────────────────────────── */
+/* ── st.page_link() tab style ─────────────────────────────── */
 [data-testid="stPageLink"] {
-    width: 100% !important;
     margin: 0 !important;
-    padding: 2px 12px !important;
+    padding: 0 !important;
+    width: 100% !important;
 }
 
 [data-testid="stPageLink"] a,
 [data-testid="stPageLink"] a:visited {
     display: flex !important;
-    flex-direction: row !important;
+    flex-direction: column !important;
     align-items: center !important;
-    gap: 13px !important;
-    padding: 14px 16px !important;
-    border-radius: 12px !important;
-    border-left: 5px solid #e8ecec !important;
-    background: #f9fafb !important;
-    color: #52617a !important;
-    font-size: 0.88rem !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    padding: 10px 4px 9px !important;
+    border-bottom: 3px solid transparent !important;
+    border-radius: 0 !important;
+    font-size: 0.82rem !important;
     font-weight: 700 !important;
-    letter-spacing: 0.01em !important;
+    color: #64748b !important;
     text-decoration: none !important;
-    transition: all 0.14s ease !important;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04) !important;
-    line-height: 1.25 !important;
-}
-
-/* Icon (first span inside the anchor) */
-[data-testid="stPageLink"] a > span:first-child,
-[data-testid="stPageLink"] a > p:first-child,
-[data-testid="stPageLink"] a > div:first-child {
-    font-size: 1.35rem !important;
-    line-height: 1 !important;
-    flex-shrink: 0 !important;
-    width: 28px !important;
     text-align: center !important;
+    transition: all 0.15s ease !important;
+    white-space: normal !important;
+    word-break: keep-all !important;
+    width: 100% !important;
 }
 
-/* ── Hover state (all tiles — teal default) ────────────────── */
+/* Icon inside page_link */
+[data-testid="stPageLink"] a p {
+    font-size: 1.2rem !important;
+    margin: 0 !important;
+    line-height: 1 !important;
+}
+
+/* Hover — default teal */
 [data-testid="stPageLink"] a:hover {
-    background: #f0f9f7 !important;
-    border-left-color: #007A6E !important;
     color: #007A6E !important;
-    box-shadow: 0 3px 10px rgba(0,122,110,0.13) !important;
-    transform: translateX(2px);
+    border-bottom-color: #007A6E !important;
+    background: #f0faf8 !important;
 }
 
-/* ── Per-tile hover accent ─────────────────────────────────── */
+/* ── Active tab (per-topic) ───────────────────────────────── */
+[data-testid="stPageLink"]:nth-of-type(1) a[aria-current="page"] {
+    color: #007A6E !important;
+    border-bottom-color: #007A6E !important;
+    background: #f0faf8 !important;
+}
+[data-testid="stPageLink"]:nth-of-type(2) a[aria-current="page"] {
+    color: #00897B !important;
+    border-bottom-color: #00897B !important;
+    background: #e8f7f4 !important;
+}
+[data-testid="stPageLink"]:nth-of-type(3) a[aria-current="page"] {
+    color: #1565C0 !important;
+    border-bottom-color: #1565C0 !important;
+    background: #e8f0fb !important;
+}
+[data-testid="stPageLink"]:nth-of-type(4) a[aria-current="page"] {
+    color: #6A1B9A !important;
+    border-bottom-color: #6A1B9A !important;
+    background: #f4ecfb !important;
+}
+[data-testid="stPageLink"]:nth-of-type(5) a[aria-current="page"] {
+    color: #2E7D32 !important;
+    border-bottom-color: #2E7D32 !important;
+    background: #eaf4ea !important;
+}
+
+/* ── Per-topic hover accents ─────────────────────────────── */
 [data-testid="stPageLink"]:nth-of-type(2) a:hover
-{ border-left-color:#00897B!important;color:#00695C!important;background:#e8f7f4!important; }
+  { color:#00695C!important; border-bottom-color:#00897B!important; background:#e8f7f4!important; }
 [data-testid="stPageLink"]:nth-of-type(3) a:hover
-{ border-left-color:#1565C0!important;color:#1565C0!important;background:#e8f0fb!important; }
+  { color:#1565C0!important; border-bottom-color:#1565C0!important; background:#e8f0fb!important; }
 [data-testid="stPageLink"]:nth-of-type(4) a:hover
-{ border-left-color:#6A1B9A!important;color:#6A1B9A!important;background:#f4ecfb!important; }
+  { color:#6A1B9A!important; border-bottom-color:#6A1B9A!important; background:#f4ecfb!important; }
 [data-testid="stPageLink"]:nth-of-type(5) a:hover
-{ border-left-color:#2E7D32!important;color:#2E7D32!important;background:#eaf4ea!important; }
+  { color:#2E7D32!important; border-bottom-color:#2E7D32!important; background:#eaf4ea!important; }
 
-/* ── Active tile (per-topic filled background) ─────────────── */
-[data-testid="stPageLink"]:nth-of-type(1) a[aria-current="page"],
-[data-testid="stPageLink"]:nth-of-type(1) a[aria-selected="true"] {
-    background: #007A6E !important;
-    border-left-color: #005a54 !important;
-    color: #ffffff !important;
-    box-shadow: 0 4px 14px rgba(0,122,110,0.30) !important;
-}
-[data-testid="stPageLink"]:nth-of-type(2) a[aria-current="page"],
-[data-testid="stPageLink"]:nth-of-type(2) a[aria-selected="true"] {
-    background: #00897B !important;
-    border-left-color: #00695C !important;
-    color: #ffffff !important;
-    box-shadow: 0 4px 14px rgba(0,137,123,0.30) !important;
-}
-[data-testid="stPageLink"]:nth-of-type(3) a[aria-current="page"],
-[data-testid="stPageLink"]:nth-of-type(3) a[aria-selected="true"] {
-    background: #1565C0 !important;
-    border-left-color: #0D47A1 !important;
-    color: #ffffff !important;
-    box-shadow: 0 4px 14px rgba(21,101,192,0.30) !important;
-}
-[data-testid="stPageLink"]:nth-of-type(4) a[aria-current="page"],
-[data-testid="stPageLink"]:nth-of-type(4) a[aria-selected="true"] {
-    background: #6A1B9A !important;
-    border-left-color: #4A148C !important;
-    color: #ffffff !important;
-    box-shadow: 0 4px 14px rgba(106,27,154,0.30) !important;
-}
-[data-testid="stPageLink"]:nth-of-type(5) a[aria-current="page"],
-[data-testid="stPageLink"]:nth-of-type(5) a[aria-selected="true"] {
-    background: #2E7D32 !important;
-    border-left-color: #1B5E20 !important;
-    color: #ffffff !important;
-    box-shadow: 0 4px 14px rgba(46,125,50,0.30) !important;
-}
-
-/* Keep icon white on active tiles */
-[data-testid="stPageLink"] a[aria-current="page"] > span,
-[data-testid="stPageLink"] a[aria-current="page"] > p,
-[data-testid="stPageLink"] a[aria-current="page"] > div {
-    color: #ffffff !important;
-}
-
-/* ── Sidebar section separator ─────────────────────────────── */
-.sidebar-sep {
-    height: 1px;
-    background: #eef0f2;
-    margin: 10px 12px;
-}
-
-/* ── Sidebar bottom caption ────────────────────────────────── */
-.sidebar-footer {
-    font-size: 0.7rem;
-    color: #bbb;
-    padding: 8px 20px 16px;
-    line-height: 1.5;
-}
+/* ── Typography ─────────────────────────────────────────── */
+h1 { font-size: 2.1rem !important; font-weight: 800 !important; color: #1A1A1A !important; }
+h2 { font-size: 1.35rem !important; font-weight: 700 !important; color: #2A2A2A !important; }
+h3 { font-size: 1.1rem  !important; font-weight: 700 !important; }
+.js-plotly-plot { border-radius: 12px; }
+hr { border-color: #e8ecec !important; }
+.stCaption, caption { color: #999 !important; font-size: 0.78rem !important; }
 </style>
 """
