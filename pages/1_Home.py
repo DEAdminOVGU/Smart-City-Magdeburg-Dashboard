@@ -25,10 +25,14 @@ def _b64_img(rel_path: str, size: str = "2rem") -> str:
     except Exception:
         return "🌡️"
 
-TEMP_ICON  = _b64_img("utils/icons/temperature.gif", "3rem")
-WIND_ICON  = _b64_img("utils/icons/wind.gif",        "3rem")
-AIR_ICON   = _b64_img("utils/icons/airquality.gif",  "3rem")
-ALERT_ICON = _b64_img("utils/icons/alert.gif",       "2.2rem")
+TEMP_ICON   = _b64_img("utils/icons/temperature.gif",    "3rem")
+WIND_ICON   = _b64_img("utils/icons/wind.gif",         "3rem")
+AIR_ICON    = _b64_img("utils/icons/airquality.gif",   "3rem")
+ALERT_ICON  = _b64_img("utils/icons/alert.gif",        "2.2rem")
+_FIRE_ICON  = _b64_img("utils/icons/fire-brigade.png", "1.5rem")
+_POLICE_ICON= _b64_img("utils/icons/policeman.png",    "1.5rem")
+_BUS_ICON   = _b64_img("utils/icons/bus.png",          "1.5rem")
+_BLDG_ICON  = _b64_img("utils/icons/historic-building.png", "1.5rem")
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -507,7 +511,50 @@ with glance_cols[4]:
     st.markdown(card_html, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SECTION 7: CITY MAP
+# SECTION 7: CITY SERVICES & CONTACTS
+# ─────────────────────────────────────────────────────────────────────────────
+st.markdown(section_header("City Services & Contacts"), unsafe_allow_html=True)
+
+_CONTACTS = [
+    {"icon": _FIRE_ICON,   "name": "Emergency (Fire / Ambulance)", "number": "112",
+     "detail": "European emergency number — free from any phone.", "color": "#C0392B"},
+    {"icon": _POLICE_ICON, "name": "Police Emergency", "number": "110",
+     "detail": "German police emergency number.", "color": "#1565C0"},
+    {"icon": "🏥",         "name": "Medical On-Call", "number": "116 117",
+     "detail": "Ärztlicher Bereitschaftsdienst — non-emergency medical help.", "color": "#DC2626"},
+    {"icon": _BLDG_ICON,   "name": "City Hall (Rathaus)", "number": "+49 391 540-0",
+     "detail": "General enquiries · Mon–Fri 08:00–18:00", "color": "#007A6E"},
+    {"icon": _BUS_ICON,    "name": "MVB Public Transport", "number": "+49 391 886-0",
+     "detail": "Tram & bus info, journey planner: mvbnet.de", "color": "#6A1B9A"},
+    {"icon": "💡",         "name": "Stadtwerke Magdeburg", "number": "+49 391 587-0",
+     "detail": "Gas, electricity, heating and water services.", "color": "#F59E0B"},
+    {"icon": "🔧",         "name": "City Maintenance", "number": "+49 391 540-2233",
+     "detail": "Report road defects, broken streetlights, and public space issues.", "color": "#78716C"},
+    {"icon": "📚",         "name": "City Library", "number": "+49 391 540-4506",
+     "detail": "Stadtbibliothek Magdeburg · Mon–Sat 10:00–19:00", "color": "#0891B2"},
+    {"icon": "ℹ️",        "name": "Tourist Information", "number": "+49 391 8380-430",
+     "detail": "Am Alten Markt 9 · tourismusmagdeburg.de", "color": "#2E7D32"},
+]
+
+_cc = st.columns(3)
+for i, c in enumerate(_CONTACTS):
+    with _cc[i % 3]:
+        st.markdown(
+            f'<div style="background:#fff;border-radius:12px;padding:16px 18px;'
+            f'box-shadow:0 2px 10px rgba(0,0,0,0.06);margin-bottom:12px;'
+            f'border-left:4px solid {c["color"]};">'
+            f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
+            f'<span style="display:inline-flex;align-items:center;font-size:1.4rem;line-height:1;">{c["icon"]}</span>'
+            f'<span style="font-size:0.78rem;font-weight:700;color:#374151;">{c["name"]}</span>'
+            f'</div>'
+            f'<div style="font-size:1.15rem;font-weight:900;color:{c["color"]};margin-bottom:4px;">{c["number"]}</div>'
+            f'<div style="font-size:0.74rem;color:#94a3b8;">{c["detail"]}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 8: CITY MAP
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown(section_header("Explore Magdeburg"), unsafe_allow_html=True)
 

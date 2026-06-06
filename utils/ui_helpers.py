@@ -158,129 +158,16 @@ header             { visibility: hidden; }
     max-width: 1160px;
 }
 
-/* ── Nav container visual styling (non-sticky, part of normal flow) ───────── */
-[data-testid="stVerticalBlock"] .nav-sentinel {
-    display: none !important;
-}
-/* Give the columns row containing the nav a bottom border */
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"]) {
-    border-bottom: 2px solid #eef0f2 !important;
-    padding-bottom: 2px !important;
-    margin-bottom: 8px !important;
-    background: #ffffff !important;
-}
-
-/* ── Brand block ──────────────────────────────────────────── */
-.topnav-brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 4px;
-}
-.brand-icon { font-size: 1.6rem; line-height: 1; }
-.brand-name {
-    font-size: 1.05rem;
-    font-weight: 900;
-    color: #007A6E;
-    letter-spacing: -0.03em;
-    line-height: 1.1;
-}
-.brand-sub {
-    font-size: 0.6rem;
-    color: #aaa;
-    text-transform: uppercase;
-    letter-spacing: 0.13em;
-    font-weight: 600;
-}
-
-/* ── st.page_link() tab style ─────────────────────────────── */
-[data-testid="stPageLink"] {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-}
-
-[data-testid="stPageLink"] a,
-[data-testid="stPageLink"] a:visited {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 3px !important;
-    padding: 10px 4px 9px !important;
-    border-bottom: 3px solid transparent !important;
-    border-radius: 0 !important;
-    font-size: 0.82rem !important;
+/* ── Nav page_link styling ─────────────────────────────── */
+[data-testid="stPageLink"] a {
+    font-size: 0.8rem !important;
     font-weight: 700 !important;
-    color: #64748b !important;
     text-decoration: none !important;
-    text-align: center !important;
-    transition: all 0.15s ease !important;
-    white-space: normal !important;
-    word-break: keep-all !important;
-    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    padding: 2px 8px 4px !important;
 }
-
-/* Icon inside page_link */
-[data-testid="stPageLink"] a p {
-    font-size: 1.2rem !important;
-    margin: 0 !important;
-    line-height: 1 !important;
-}
-
-/* Hover — default teal */
-[data-testid="stPageLink"] a:hover {
-    color: #007A6E !important;
-    border-bottom-color: #007A6E !important;
-    background: #f0faf8 !important;
-}
-
-/* ── Active tab (per-topic) ───────────────────────────────── */
-[data-testid="stPageLink"]:nth-of-type(1) a[aria-current="page"] {
-    color: #007A6E !important;
-    border-bottom-color: #007A6E !important;
-    background: #f0faf8 !important;
-}
-[data-testid="stPageLink"]:nth-of-type(2) a[aria-current="page"] {
-    color: #00897B !important;
-    border-bottom-color: #00897B !important;
-    background: #e8f7f4 !important;
-}
-[data-testid="stPageLink"]:nth-of-type(3) a[aria-current="page"] {
-    color: #1565C0 !important;
-    border-bottom-color: #1565C0 !important;
-    background: #e8f0fb !important;
-}
-[data-testid="stPageLink"]:nth-of-type(4) a[aria-current="page"] {
-    color: #6A1B9A !important;
-    border-bottom-color: #6A1B9A !important;
-    background: #f4ecfb !important;
-}
-[data-testid="stPageLink"]:nth-of-type(5) a[aria-current="page"] {
-    color: #2E7D32 !important;
-    border-bottom-color: #2E7D32 !important;
-    background: #eaf4ea !important;
-}
-
-/* ── Per-topic hover accents ─────────────────────────────── */
-[data-testid="stPageLink"]:nth-of-type(2) a:hover
-  { color:#00695C!important; border-bottom-color:#00897B!important; background:#e8f7f4!important; }
-[data-testid="stPageLink"]:nth-of-type(3) a:hover
-  { color:#1565C0!important; border-bottom-color:#1565C0!important; background:#e8f0fb!important; }
-[data-testid="stPageLink"]:nth-of-type(4) a:hover
-  { color:#6A1B9A!important; border-bottom-color:#6A1B9A!important; background:#f4ecfb!important; }
-[data-testid="stPageLink"]:nth-of-type(5) a:hover
-  { color:#2E7D32!important; border-bottom-color:#2E7D32!important; background:#eaf4ea!important; }
-[data-testid="stPageLink"]:nth-of-type(6) a:hover
-  { color:#C0392B!important; border-bottom-color:#C0392B!important; background:#fdf0ef!important; }
-[data-testid="stPageLink"]:nth-of-type(7) a:hover
-  { color:#E65100!important; border-bottom-color:#E65100!important; background:#fff3e0!important; }
-
-/* ── Active state tab 5 (City & Culture — purple) ───────────────── */
-[data-testid="stPageLink"]:nth-of-type(5) a[aria-current="page"]
-  { color:#6D28D9!important; border-bottom-color:#6D28D9!important; background:#f5f3ff!important; }
-[data-testid="stPageLink"]:nth-of-type(5) a:hover
-  { color:#6D28D9!important; border-bottom-color:#6D28D9!important; background:#f5f3ff!important; }
+[data-testid="stPageLink"] a:hover { color: #007A6E !important; }
 
 /* ── Typography ─────────────────────────────────────────── */
 h1 { font-size: 2.1rem !important; font-weight: 800 !important; color: #1A1A1A !important; }

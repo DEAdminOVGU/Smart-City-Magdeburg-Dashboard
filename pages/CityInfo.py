@@ -458,44 +458,4 @@ for i, ev in enumerate(upcoming[:4]):
 
 st.caption("Source: Landeshauptstadt Magdeburg — Events calendar (magdeburg.de/veranstaltungen)")
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SECTION 6: CITY SERVICES & CONTACTS
-# ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("City Services & Contacts", color=CITY_PURPLE), unsafe_allow_html=True)
 
-contacts = [
-    {"icon": _FIRE,   "name": "Emergency (Fire / Ambulance)", "number": "112",
-     "detail": "European emergency number — free from any phone.", "color": "#C0392B"},
-    {"icon": _POLICE, "name": "Police Emergency", "number": "110",
-     "detail": "German police emergency number.", "color": "#1565C0"},
-    {"icon": "🏥",    "name": "Medical On-Call", "number": "116 117",
-     "detail": "Ärztlicher Bereitschaftsdienst — non-emergency medical help.", "color": "#DC2626"},
-    {"icon": _BLDG,   "name": "City Hall (Rathaus)", "number": "+49 391 540-0",
-     "detail": "General enquiries · Mon–Fri 08:00–18:00", "color": "#007A6E"},
-    {"icon": _BUS,    "name": "MVB Public Transport", "number": "+49 391 886-0",
-     "detail": "Tram & bus info, journey planner: mvbnet.de", "color": "#6A1B9A"},
-    {"icon": "💡", "name": "Stadtwerke Magdeburg", "number": "+49 391 587-0",
-     "detail": "Gas, electricity, heating and water services.", "color": "#F59E0B"},
-    {"icon": "🔧", "name": "City Maintenance", "number": "+49 391 540-2233",
-     "detail": "Report road defects, broken streetlights, and public space issues.", "color": "#78716C"},
-    {"icon": "📚", "name": "City Library", "number": "+49 391 540-4506",
-     "detail": "Stadtbibliothek Magdeburg · Mon–Sat 10:00–19:00", "color": "#0891B2"},
-    {"icon": "ℹ️", "name": "Tourist Information", "number": "+49 391 8380-430",
-     "detail": "Am Alten Markt 9 · tourismusmagdeburg.de", "color": "#2E7D32"},
-]
-
-contact_cols = st.columns(3)
-for i, c in enumerate(contacts):
-    with contact_cols[i % 3]:
-        st.markdown(f"""
-<div style="background:#fff;border-radius:12px;padding:16px 18px;
-            box-shadow:0 2px 10px rgba(0,0,0,0.06);margin-bottom:12px;
-            border-left:4px solid {c['color']};">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-    <span style="display:inline-flex;align-items:center;font-size:1.4rem;line-height:1;">{c["icon"]}</span>
-    <span style="font-size:0.78rem;font-weight:700;color:#374151;">{c["name"]}</span>
-  </div>
-  <div style="font-size:1.15rem;font-weight:900;color:{c['color']};margin-bottom:4px;">{c["number"]}</div>
-  <div style="font-size:0.74rem;color:#94a3b8;">{c["detail"]}</div>
-</div>
-""", unsafe_allow_html=True)
