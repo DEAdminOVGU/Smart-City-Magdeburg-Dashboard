@@ -1,3 +1,5 @@
+import base64
+import os
 import streamlit as st
 import streamlit.components.v1 as components
 import folium
@@ -5,11 +7,27 @@ import pandas as pd
 from datetime import date, timedelta
 
 from utils.live_api import (
-    fetch_weather, fetch_elbe_level, fetch_air_quality,
+    fetch_weather, fetch_air_quality,
     fetch_weather_forecast, fetch_city_news,
 )
 from utils.data_loader import load_kiss
-from utils.ui_helpers import section_header, live_card, topic_card
+from utils.ui_helpers import section_header, topic_card
+
+# ── Icon assets ───────────────────────────────────────────────────────────────
+def _b64_img(rel_path: str, size: str = "2rem") -> str:
+    _p = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", rel_path))
+    try:
+        with open(_p, "rb") as _f:
+            _b = base64.b64encode(_f.read()).decode()
+        ext = os.path.splitext(_p)[1].lstrip(".")
+        mime = "image/gif" if ext == "gif" else f"image/{ext}"
+        return f"<img src='data:{mime};base64,{_b}' style='width:{size};height:{size};object-fit:contain;'>"
+    except Exception:
+        return "🌡️"
+
+TEMP_ICON = _b64_img("utils/icons/temperature.gif", "3rem")
+WIND_ICON = _b64_img("utils/icons/wind.gif",        "3rem")
+AIR_ICON  = _b64_img("utils/icons/airquality.gif",  "3rem")
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -39,7 +57,6 @@ def day_label(date_str: str) -> str:
 
 # ── Fetch live data (cached) ──────────────────────────────────────────────────
 weather    = fetch_weather()
-elbe       = fetch_elbe_level()
 pm25       = fetch_air_quality()
 forecast   = fetch_weather_forecast()
 news_items = fetch_city_news()
@@ -48,16 +65,39 @@ temp     = weather.get("temperature")        if weather else None
 wind_spd = weather.get("wind_speed")         if weather else None
 cond     = weather.get("condition")          if weather else None
 humidity = weather.get("relative_humidity")  if weather else None
-elbe_val = elbe.get("value")                 if elbe    else None
 
-# ── Page header ───────────────────────────────────────────────────────────────
-st.markdown("""
-<div style="padding:28px 0 6px 0;">
-  <div style="font-size:2rem;font-weight:900;color:#1A1A1A;line-height:1.1;">
-    Good day, Magdeburg 👋
-  </div>
-  <div style="font-size:1rem;color:#64748b;margin-top:6px;">
-    Your city at a glance — live conditions, news, events, and city services.
+# ── Page header with fading background ───────────────────────────────────────
+_img_path = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "utils", "mag.jpeg")
+)
+try:
+    with open(_img_path, "rb") as _f:
+        _img_b64 = base64.b64encode(_f.read()).decode()
+    _img_css = f"url('data:image/jpeg;base64,{_img_b64}')"
+except Exception:
+    _img_css = "none"
+
+st.markdown(f"""
+<div style="
+  position:relative;
+  border-radius:16px;
+  overflow:hidden;
+  margin-bottom:24px;
+  min-height:160px;
+  background-image:
+    linear-gradient(to right, #ffffff 38%, rgba(255,255,255,0.55) 68%, rgba(255,255,255,0) 100%),
+    {_img_css};
+  background-size: cover;
+  background-position: center right;
+  background-repeat: no-repeat;
+">
+  <div style="position:relative;padding:38px 40px 32px 36px;max-width:560px;">
+    <div style="font-size:2rem;font-weight:900;color:#1A1A1A;line-height:1.15;">
+      Good day, Magdeburg 👋
+    </div>
+    <div style="font-size:1rem;color:#475569;margin-top:8px;line-height:1.55;">
+      Your city at a glance — live conditions, news, events, and city services.
+    </div>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -66,14 +106,6 @@ st.markdown("""
 # SECTION 1: ACTIVE ALERTS
 # ─────────────────────────────────────────────────────────────────────────────
 alerts = []
-if elbe_val is not None and elbe_val > 400:
-    alerts.append(("🚨 Flood Advisory",
-                   f"Elbe river is at **{elbe_val:.0f} cm** — above the advisory threshold of 400 cm. "
-                   "Avoid the riverside promenades. Monitor PEGELONLINE for updates.", "error"))
-elif elbe_val is not None and elbe_val > 300:
-    alerts.append(("⚠️ Elbe Watch",
-                   f"Elbe is at **{elbe_val:.0f} cm** and rising. No immediate risk — keep an eye on the level.",
-                   "warning"))
 
 if pm25 is not None and pm25 > 35:
     alerts.append(("😷 Air Quality Warning",
@@ -154,44 +186,64 @@ with pulse_col:
     temp_color = ("#C0392B" if temp is not None and temp < 0
                   else "#E65100" if temp is not None and temp < 5
                   else "#007A6E")
-    st.markdown(live_card(
-        "🌡️", "Temperature",
-        f"{temp:.1f} °C" if temp is not None else "—",
-        "Current outdoor temperature",
-        status_color=temp_color,
-    ), unsafe_allow_html=True)
+    _temp_val = f"{temp:.1f} °C" if temp is not None else "—"
+    st.markdown(f"""
+<div style="background:#fff;border-radius:12px;padding:18px 16px;
+            box-shadow:0 2px 12px rgba(0,0,0,0.06);
+            border-left:4px solid {temp_color};margin-bottom:4px;">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <div style="flex-shrink:0;">{TEMP_ICON}</div>
+    <div>
+      <div style="font-size:0.68rem;font-weight:800;color:#999;text-transform:uppercase;
+                  letter-spacing:0.1em;margin-bottom:4px;">Temperature</div>
+      <div style="font-size:1.8rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{_temp_val}</div>
+      <div style="font-size:0.78rem;color:#999;margin-top:4px;">Current outdoor temperature</div>
+    </div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
     wind_color = ("#C0392B" if wind_spd is not None and wind_spd > 60
                   else "#F59E0B" if wind_spd is not None and wind_spd > 40
                   else "#007A6E")
-    st.markdown(live_card(
-        "💨", "Wind Speed",
-        f"{wind_spd:.0f} km/h" if wind_spd is not None else "—",
-        "Alert threshold: 60 km/h",
-        status_color=wind_color,
-    ), unsafe_allow_html=True)
-
-    elbe_color = ("#C0392B" if elbe_val is not None and elbe_val > 400
-                  else "#F59E0B" if elbe_val is not None and elbe_val > 300
-                  else "#007A6E")
-    st.markdown(live_card(
-        "🌊", "Elbe Water Level",
-        f"{elbe_val:.0f} cm" if elbe_val is not None else "—",
-        "Advisory threshold: 400 cm",
-        status_color=elbe_color,
-    ), unsafe_allow_html=True)
+    _wind_val = f"{wind_spd:.0f} km/h" if wind_spd is not None else "—"
+    st.markdown(f"""
+<div style="background:#fff;border-radius:12px;padding:18px 16px;
+            box-shadow:0 2px 12px rgba(0,0,0,0.06);
+            border-left:4px solid {wind_color};margin-bottom:4px;">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <div style="flex-shrink:0;">{WIND_ICON}</div>
+    <div>
+      <div style="font-size:0.68rem;font-weight:800;color:#999;text-transform:uppercase;
+                  letter-spacing:0.1em;margin-bottom:4px;">Wind Speed</div>
+      <div style="font-size:1.8rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{_wind_val}</div>
+      <div style="font-size:0.78rem;color:#999;margin-top:4px;">Alert threshold: 60 km/h</div>
+    </div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
     pm_color = ("#C0392B" if pm25 is not None and pm25 > 35
                 else "#F59E0B" if pm25 is not None and pm25 > 25
                 else "#007A6E")
-    st.markdown(live_card(
-        "🫁", "PM2.5 Air Quality",
-        f"{pm25:.1f} µg/m³" if pm25 is not None else "—",
-        "WHO guideline: 35 µg/m³",
-        status_color=pm_color,
-    ), unsafe_allow_html=True)
+    _pm_val = f"{pm25:.1f} µg/m³" if pm25 is not None else "—"
+    st.markdown(f"""
+<div style="background:#fff;border-radius:12px;padding:18px 16px;
+            box-shadow:0 2px 12px rgba(0,0,0,0.06);
+            border-left:4px solid {pm_color};margin-bottom:4px;">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <div style="flex-shrink:0;">{AIR_ICON}</div>
+    <div>
+      <div style="font-size:0.68rem;font-weight:800;color:#999;text-transform:uppercase;
+                  letter-spacing:0.1em;margin-bottom:4px;">PM2.5 Air Quality</div>
+      <div style="font-size:1.8rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{_pm_val}</div>
+      <div style="font-size:0.78rem;color:#999;margin-top:4px;">WHO guideline: 35 µg/m³</div>
+    </div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
-    st.caption("Sources: Bright Sky · PEGELONLINE · Sensor.Community")
+    st.caption("Sources: Bright Sky / DWD · Sensor.Community")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 4: TODAY'S TIPS
@@ -211,11 +263,6 @@ elif temp is not None and temp < 0:
     tips.append("🧥 Freezing temperatures — dress in layers and check gritting status before cycling.")
 else:
     tips.append("🌤️ Good conditions — explore the Altstadt or cycle along the Elbe cycle path.")
-
-if elbe_val is not None and elbe_val > 300:
-    tips.append("🚧 Elbe level is elevated — the riverside promenade near Strombrücke may be partially flooded.")
-else:
-    tips.append("🚴 The Elbe cycle path is in good condition today — a scenic ride to Schönebeck is possible.")
 
 if pm25 is not None and pm25 > 25:
     tips.append("😷 Air quality is moderate — people with respiratory conditions should limit strenuous outdoor exercise.")
@@ -446,85 +493,7 @@ with glance_cols[4]:
                 unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SECTION 7: EVENTS CALENDAR
-# ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Upcoming Events in Magdeburg"), unsafe_allow_html=True)
-
-today_date = date.today()
-
-def next_occurrence(month: int, day: int) -> date:
-    try:
-        candidate = date(today_date.year, month, day)
-    except ValueError:
-        candidate = date(today_date.year, month, 28)
-    if candidate < today_date:
-        try:
-            candidate = date(today_date.year + 1, month, day)
-        except ValueError:
-            candidate = date(today_date.year + 1, month, 28)
-    return candidate
-
-def next_first_monday() -> date:
-    d = today_date.replace(day=1)
-    while True:
-        first_monday = d + timedelta(days=(7 - d.weekday()) % 7)
-        if first_monday >= today_date:
-            return first_monday
-        d = (d + timedelta(days=32)).replace(day=1)
-
-EVENTS = [
-    {"name": "Stadtfest Magdeburg",       "icon": "🎉", "month": 6,    "day": 14,
-     "desc": "City festival — music, food, and culture at the Elbe riverside."},
-    {"name": "Magdeburg Marathon",         "icon": "🏃", "month": 4,    "day": 20,
-     "desc": "Annual city marathon through Magdeburg's historic districts."},
-    {"name": "Kulturnacht",                "icon": "🎭", "month": 10,   "day": 12,
-     "desc": "One night, dozens of venues — museums, galleries, theatres open until midnight."},
-    {"name": "Altstadtfest",              "icon": "🏰", "month": 8,    "day": 23,
-     "desc": "Medieval old-town festival at the Dom and Hundertwasserhaus."},
-    {"name": "Weihnachtsmarkt",            "icon": "🎄", "month": 11,   "day": 24,
-     "desc": "Magdeburg Christmas market at the Cathedral square — one of Germany's oldest."},
-    {"name": "City Council Open Session", "icon": "🏛️", "month": None, "day": None,
-     "desc": "Stadtrat public meeting — citizens can attend and observe."},
-]
-
-upcoming = []
-for ev in EVENTS:
-    ev_date = next_first_monday() if ev["month"] is None else next_occurrence(ev["month"], ev["day"])
-    upcoming.append({**ev, "date": ev_date})
-
-upcoming.sort(key=lambda x: x["date"])
-upcoming = upcoming[:4]
-
-ev_cols = st.columns(len(upcoming))
-for i, ev in enumerate(upcoming):
-    with ev_cols[i]:
-        days_away = (ev["date"] - today_date).days
-        if days_away == 0:
-            badge, badge_color = "Today!", "#C0392B"
-        elif days_away <= 7:
-            badge, badge_color = f"In {days_away} days", "#E65100"
-        elif days_away <= 30:
-            badge, badge_color = f"In {days_away} days", "#F59E0B"
-        else:
-            badge, badge_color = ev["date"].strftime("%d %b %Y"), "#64748b"
-
-        st.markdown(f"""
-<div style="background:#fff;border-radius:14px;padding:18px 16px;
-            box-shadow:0 2px 12px rgba(0,0,0,0.07);">
-  <div style="font-size:1.8rem;margin-bottom:8px;">{ev["icon"]}</div>
-  <div style="font-size:0.82rem;font-weight:800;color:#1A1A1A;margin-bottom:6px;
-              line-height:1.3;">{ev["name"]}</div>
-  <div style="display:inline-block;background:{badge_color}18;color:{badge_color};
-              border-radius:8px;padding:2px 10px;font-size:0.72rem;
-              font-weight:700;margin-bottom:8px;">{badge}</div>
-  <div style="font-size:0.76rem;color:#64748b;line-height:1.5;">{ev["desc"]}</div>
-</div>
-""", unsafe_allow_html=True)
-
-st.caption("Source: Landeshauptstadt Magdeburg — Events calendar (magdeburg.de/veranstaltungen)")
-
-# ─────────────────────────────────────────────────────────────────────────────
-# SECTION 8: CITY MAP
+# SECTION 7: CITY MAP
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown(section_header("Explore Magdeburg"), unsafe_allow_html=True)
 
@@ -551,47 +520,12 @@ map_html = m._repr_html_()
 components.html(map_html, height=440, scrolling=False)
 st.caption("Source: OpenStreetMap / CartoDB · Click markers for details")
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SECTION 9: CITY CONTACTS
-# ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("City Services & Contacts"), unsafe_allow_html=True)
-
-contacts = [
-    {"icon": "🚒", "name": "Emergency (Fire / Ambulance)", "number": "112",
-     "detail": "European emergency number — free from any phone.", "color": "#C0392B"},
-    {"icon": "👮", "name": "Police Emergency", "number": "110",
-     "detail": "German police emergency number.", "color": "#1565C0"},
-    {"icon": "🏛️", "name": "City Hall (Rathaus)", "number": "+49 391 540-0",
-     "detail": "General enquiries · Mon–Fri 08:00–18:00", "color": "#007A6E"},
-    {"icon": "🚌", "name": "MVB Public Transport", "number": "+49 391 886-0",
-     "detail": "Tram & bus info, journey planner: mvbnet.de", "color": "#6A1B9A"},
-    {"icon": "💡", "name": "Stadtwerke Magdeburg", "number": "+49 391 587-0",
-     "detail": "Gas, electricity, heating and water services.", "color": "#F59E0B"},
-    {"icon": "ℹ️", "name": "Tourist Information", "number": "+49 391 8380-430",
-     "detail": "Am Alten Markt 9 · tourismusmagdeburg.de", "color": "#2E7D32"},
-]
-
-contact_cols = st.columns(3)
-for i, c in enumerate(contacts):
-    with contact_cols[i % 3]:
-        st.markdown(f"""
-<div style="background:#fff;border-radius:12px;padding:16px 18px;
-            box-shadow:0 2px 10px rgba(0,0,0,0.06);margin-bottom:12px;
-            border-left:4px solid {c['color']};">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-    <span style="font-size:1.4rem;">{c["icon"]}</span>
-    <span style="font-size:0.78rem;font-weight:700;color:#374151;">{c["name"]}</span>
-  </div>
-  <div style="font-size:1.15rem;font-weight:900;color:{c['color']};margin-bottom:4px;">{c["number"]}</div>
-  <div style="font-size:0.74rem;color:#94a3b8;">{c["detail"]}</div>
-</div>
-""", unsafe_allow_html=True)
 
 st.markdown(
     "<div style='height:20px'></div>"
     "<div style='font-size:0.72rem;color:#94a3b8;text-align:center;padding-bottom:16px;'>"
     "Smart City Magdeburg Dashboard · Data sources: KISS-MD, Bright Sky/DWD, "
-    "PEGELONLINE, Sensor.Community, OpenStreetMap"
+    "Sensor.Community, OpenStreetMap"
     "</div>",
     unsafe_allow_html=True,
 )

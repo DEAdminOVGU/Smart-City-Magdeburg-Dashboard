@@ -244,15 +244,11 @@ header             { visibility: hidden; }
 [data-testid="stPageLink"]:nth-of-type(7) a:hover
   { color:#E65100!important; border-bottom-color:#E65100!important; background:#fff3e0!important; }
 
-/* ── Active state tabs 6–8 (Health/Education/Navigation) ─────────── */
-[data-testid="stPageLink"]:nth-of-type(6) a[aria-current="page"]
-  { color:#C0392B!important; border-bottom-color:#C0392B!important; background:#fdf0ef!important; }
-[data-testid="stPageLink"]:nth-of-type(7) a[aria-current="page"]
-  { color:#E65100!important; border-bottom-color:#E65100!important; background:#fff3e0!important; }
-[data-testid="stPageLink"]:nth-of-type(8) a[aria-current="page"]
-  { color:#D4481C!important; border-bottom-color:#D4481C!important; background:#fff5f2!important; }
-[data-testid="stPageLink"]:nth-of-type(8) a:hover
-  { color:#D4481C!important; border-bottom-color:#D4481C!important; background:#fff5f2!important; }
+/* ── Active state tab 5 (City & Culture — purple) ───────────────── */
+[data-testid="stPageLink"]:nth-of-type(5) a[aria-current="page"]
+  { color:#6D28D9!important; border-bottom-color:#6D28D9!important; background:#f5f3ff!important; }
+[data-testid="stPageLink"]:nth-of-type(5) a:hover
+  { color:#6D28D9!important; border-bottom-color:#6D28D9!important; background:#f5f3ff!important; }
 
 /* ── Typography ─────────────────────────────────────────── */
 h1 { font-size: 2.1rem !important; font-weight: 800 !important; color: #1A1A1A !important; }

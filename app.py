@@ -20,12 +20,8 @@ pages = {
                 title="Climate & Environment",   icon="🌡️",  url_path="climate"),
         st.Page("pages/3_Population_Housing.py",
                 title="Population & Housing",    icon="🏘️",  url_path="population"),
-        st.Page("pages/5_Economy.py",
-                title="Economy & Finance",       icon="💶",  url_path="economy"),
-        st.Page("pages/6_Health.py",
-                title="Health & Safety",         icon="🏥",  url_path="health"),
-        st.Page("pages/7_Education.py",
-                title="Education & Culture",     icon="🎓",  url_path="education"),
+        st.Page("pages/CityInfo.py",
+                title="City & Culture",          icon="🏛️",  url_path="city"),
     ]
 }
 
@@ -35,7 +31,7 @@ pg = st.navigation(pages, position="hidden")
 with st.container():
     st.markdown('<span class="nav-sentinel"></span>', unsafe_allow_html=True)
 
-    brand_col, c1, c2, c3, c4, c5, c6, c7 = st.columns([2, 1, 1, 1, 1, 1, 1, 1])
+    brand_col, c1, c2, c3, c4, c5 = st.columns([2, 1, 1, 1, 1, 1])
 
     with brand_col:
         st.markdown("""
@@ -47,12 +43,10 @@ with st.container():
   </div>
 </div>""", unsafe_allow_html=True)
 
-    with c1: st.page_link("pages/1_Home.py",                label="Home Page",   icon="🏠")
-    with c2: st.page_link("pages/CityNav.py",               label="Navigation",  icon="🗺️")
-    with c3: st.page_link("pages/2_Climate.py",             label="Climate",     icon="🌡️")
-    with c4: st.page_link("pages/3_Population_Housing.py",  label="Population",  icon="🏘️")
-    with c5: st.page_link("pages/5_Economy.py",             label="Economy",     icon="💶")
-    with c6: st.page_link("pages/6_Health.py",              label="Health",      icon="🏥")
-    with c7: st.page_link("pages/7_Education.py",           label="Education",   icon="🎓")
+    with c1: st.page_link("pages/1_Home.py",                label="Home Page",     icon="🏠")
+    with c2: st.page_link("pages/CityNav.py",               label="Navigation",    icon="🗺️")
+    with c3: st.page_link("pages/2_Climate.py",             label="Climate",       icon="🌡️")
+    with c4: st.page_link("pages/3_Population_Housing.py",  label="Population",    icon="🏘️")
+    with c5: st.page_link("pages/CityInfo.py",              label="City & Culture", icon="🏛️")
 
 pg.run()
