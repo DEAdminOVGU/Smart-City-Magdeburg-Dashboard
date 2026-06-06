@@ -12,6 +12,7 @@ from utils.constants import (
     MONTHS_DE, MONTHS_DE_ORDER, MD_TEAL, MD_BLUE, MD_RED, MD_ORANGE, PLOTLY_TEMPLATE
 )
 from utils.ui_helpers import hero_stat, section_header, insight_box, live_card
+from utils.i18n import t
 
 # ── Weather condition icon helper ─────────────────────────────────────────────
 _COND_ICON = {
@@ -29,19 +30,18 @@ def _cond_icon(cond: str) -> str:
 def _day_label(date_str: str) -> str:
     try:
         d = date.fromisoformat(date_str[:10])
-        if d == date.today():       return "Today"
-        if d == date.today() + timedelta(days=1): return "Tomorrow"
+        if d == date.today():                     return t("day.today")
+        if d == date.today() + timedelta(days=1): return t("day.tomorrow")
         return d.strftime("%A")
     except Exception:
         return date_str[:10]
 
 # ── Page header ───────────────────────────────────────────────────────────────
-st.title("Climate & Environment")
+st.title(t("cli.title"))
 st.markdown(
-    "<p style='font-size:0.97rem;color:#64748b;max-width:680px;margin:-6px 0 20px 0;'>"
-    "Magdeburg's weather, long-term climate trends, and air quality — "
-    "live conditions, weekly snapshot, historical patterns, and pollution data."
-    "</p>",
+    f"<p style='font-size:0.97rem;color:#64748b;max-width:680px;margin:-6px 0 20px 0;'>"
+    f"{t('cli.subtitle')}"
+    f"</p>",
     unsafe_allow_html=True,
 )
 st.caption("Sources: DWD Climate Data Center (station 03126) · KISS-MD / Landeshauptstadt Magdeburg · Bright Sky / Sensor.Community")
@@ -107,7 +107,7 @@ except Exception:
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 1: LIVE CONDITIONS
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Live Conditions Right Now", color=MD_TEAL), unsafe_allow_html=True)
+st.markdown(section_header(t("cli.sec.live"), color=MD_TEAL), unsafe_allow_html=True)
 
 live_cols = st.columns(4)
 
@@ -116,18 +116,18 @@ with live_cols[0]:
                   else "#E65100" if temp is not None and temp < 5
                   else "#007A6E")
     st.markdown(live_card(
-        "🌡️", "Temperature",
+        "🌡️", t("cli.live.temp"),
         f"{temp:.1f} °C" if temp is not None else "—",
-        f"{_cond_icon(cond)} {(cond or '').replace('-',' ').title()}" if cond else "Current outdoor temp",
+        f"{_cond_icon(cond)} {(cond or '').replace('-',' ').title()}" if cond else t("pulse.temp.sub"),
         status_color=temp_color,
     ), unsafe_allow_html=True)
 
 with live_cols[1]:
     hum_color = "#007A6E" if humidity is not None and humidity < 80 else "#F59E0B"
     st.markdown(live_card(
-        "💧", "Humidity",
+        "💧", t("cli.live.hum"),
         f"{humidity:.0f}%" if humidity is not None else "—",
-        "Relative outdoor humidity",
+        t("pulse.humidity.sub"),
         status_color=hum_color,
     ), unsafe_allow_html=True)
 
@@ -136,9 +136,9 @@ with live_cols[2]:
                   else "#F59E0B" if wind_spd is not None and wind_spd > 40
                   else "#007A6E")
     st.markdown(live_card(
-        "💨", "Wind Speed",
+        "💨", t("cli.live.wind"),
         f"{wind_spd:.0f} km/h" if wind_spd is not None else "—",
-        "Alert > 60 km/h",
+        t("pulse.wind.sub"),
         status_color=wind_color,
     ), unsafe_allow_html=True)
 
@@ -147,9 +147,9 @@ with live_cols[3]:
                 else "#F59E0B" if pm25 is not None and pm25 > 25
                 else "#007A6E")
     st.markdown(live_card(
-        "🫁", "PM2.5 Air Quality",
+        "🫁", t("cli.live.pm25"),
         f"{pm25:.1f} µg/m³" if pm25 is not None else "—",
-        "WHO guideline: 35 µg/m³",
+        t("pulse.pm25.sub"),
         status_color=pm_color,
     ), unsafe_allow_html=True)
 

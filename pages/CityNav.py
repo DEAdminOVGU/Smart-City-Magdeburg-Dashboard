@@ -12,18 +12,18 @@ from utils.live_api   import (fetch_weather, fetch_elbe_level,
                                fetch_service_disruptions)
 from utils.overpass   import fetch_parking, fetch_charging, fetch_transit_stops, fetch_restaurants
 from utils.ui_helpers import section_header, live_card
+from utils.i18n import t
 from utils.constants  import PLOTLY_TEMPLATE
 
 NAV_ORANGE = "#D4481C"
 NAV_AMBER  = "#E8650B"
 
 # ── Page header ───────────────────────────────────────────────────────────────
-st.title("City Navigation")
+st.title(t("navi.title"))
 st.markdown(
-    "<p style='font-size:0.97rem;color:#64748b;max-width:680px;margin:-6px 0 20px 0;'>"
-    "Explore Magdeburg's transport network — parking, EV charging, public transit, "
-    "restaurants, and traffic accident hotspots on an interactive map."
-    "</p>",
+    f"<p style='font-size:0.97rem;color:#64748b;max-width:680px;margin:-6px 0 20px 0;'>"
+    f"{t('navi.subtitle')}"
+    f"</p>",
     unsafe_allow_html=True,
 )
 
@@ -89,11 +89,8 @@ else:
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 2: FETCH MAP DATA
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Interactive City Map", color=NAV_ORANGE), unsafe_allow_html=True)
-st.caption(
-    "Layers: district boundaries · parking · EV charging · transit stops · restaurants & cafés · accident hotspots. "
-    "Use the layer control (top-right) to toggle layers on/off."
-)
+st.markdown(section_header(t("navi.sec.map"), color=NAV_ORANGE), unsafe_allow_html=True)
+st.caption(t("navi.map.cap") + " Use the layer control (top-right) to toggle layers on/off.")
 
 with st.spinner("Loading map data from OpenStreetMap…"):
     parking_pts     = fetch_parking()
@@ -302,23 +299,23 @@ components.html(m._repr_html_(), height=560, scrolling=False)
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 3: STATS STRIP
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Infrastructure at a Glance", color=NAV_ORANGE), unsafe_allow_html=True)
+st.markdown(section_header(t("navi.sec.infra"), color=NAV_ORANGE), unsafe_allow_html=True)
 
 stat_cols = st.columns(4)
 
 with stat_cols[0]:
     st.markdown(live_card(
-        "🅿️", "Parking Locations",
+        "🅿️", t("navi.card.parking"),
         str(len(parking_pts)) if parking_pts else "—",
-        "OSM locations in city bounds",
+        t("navi.card.parking.sub"),
         status_color="#1565C0",
     ), unsafe_allow_html=True)
 
 with stat_cols[1]:
     st.markdown(live_card(
-        "⚡", "EV Charging Stations",
+        "⚡", t("navi.card.charging"),
         str(len(charging_pts)) if charging_pts else "—",
-        "Public chargers mapped in OSM",
+        t("navi.card.charging.sub"),
         status_color="#F59E0B",
     ), unsafe_allow_html=True)
 
@@ -326,7 +323,7 @@ with stat_cols[2]:
     bus_count  = sum(1 for s in transit_pts if s["type"] == "bus")
     tram_count = sum(1 for s in transit_pts if s["type"] == "tram")
     st.markdown(live_card(
-        "🚌", "Transit Stops",
+        "🚌", t("navi.card.transit"),
         str(len(transit_pts)) if transit_pts else "—",
         f"{bus_count} bus · {tram_count} tram",
         status_color="#009E3D",
@@ -337,14 +334,14 @@ with stat_cols[3]:
         max_year = max(a["year"] for a in accident_pts)
         yr_count = sum(1 for a in accident_pts if a["year"] == max_year)
         st.markdown(live_card(
-            "🚨", "Recorded Accidents",
+            "🚨", t("navi.card.accidents"),
             f"{yr_count:,}".replace(",", "."),
             f"Traffic incidents in {max_year}",
             status_color="#C0392B",
         ), unsafe_allow_html=True)
     else:
         st.markdown(live_card(
-            "🚨", "Recorded Accidents", "—",
+            "🚨", t("navi.card.accidents"), "—",
             "Unfallatlas data unavailable",
             status_color="#C0392B",
         ), unsafe_allow_html=True)
@@ -354,7 +351,7 @@ st.caption("Sources: OpenStreetMap / Overpass API (parking, charging, transit) �
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 4: LIVE DEPARTURES
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Live Departures — MVB", color=NAV_ORANGE), unsafe_allow_html=True)
+st.markdown(section_header(t("navi.sec.depart"), color=NAV_ORANGE), unsafe_allow_html=True)
 
 mvb_stops = load_mvb_stops()
 if mvb_stops:

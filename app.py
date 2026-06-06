@@ -2,6 +2,7 @@ import base64
 import os
 import streamlit as st
 from utils.ui_helpers import GLOBAL_CSS
+from utils.i18n import t
 
 st.set_page_config(
     page_title="Smart City Magdeburg",
@@ -11,6 +12,9 @@ st.set_page_config(
 )
 
 st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
+
+if "lang" not in st.session_state:
+    st.session_state["lang"] = "de"
 
 pages = {
     "Dashboard": [
@@ -48,27 +52,38 @@ _GIFS = [
 ]
 
 _NAV = [
-    ("pages/1_Home.py",                "Home",          "",           "#007A6E"),
-    ("pages/CityNav.py",               "Navigation",    "navigation", "#00897B"),
-    ("pages/2_Climate.py",             "Climate",       "climate",    "#1565C0"),
-    ("pages/3_Population_Housing.py",  "Population",    "population", "#6A1B9A"),
-    ("pages/CityInfo.py",              "City & Culture","city",       "#6D28D9"),
+    ("pages/1_Home.py",                t("nav.home"),       "",           "#007A6E"),
+    ("pages/CityNav.py",               t("nav.navigation"), "navigation", "#00897B"),
+    ("pages/2_Climate.py",             t("nav.climate"),    "climate",    "#1565C0"),
+    ("pages/3_Population_Housing.py",  t("nav.population"), "population", "#6A1B9A"),
+    ("pages/CityInfo.py",              t("nav.city"),       "city",       "#6D28D9"),
 ]
 
 current = getattr(pg, "url_path", None) or ""
 
 # ── Nav bar ───────────────────────────────────────────────────────────────────
-brand_col, c1, c2, c3, c4, c5 = st.columns([2, 1, 1, 1, 1, 1])
+brand_col, c1, c2, c3, c4, c5, lang_col = st.columns([2, 1, 1, 1, 1, 1, 0.8])
 nav_cols = [c1, c2, c3, c4, c5]
 
 with brand_col:
     st.markdown(
         '<div style="padding:8px 4px 4px;">'
         '<div style="font-size:1.05rem;font-weight:900;color:#007A6E;letter-spacing:-0.03em;line-height:1.1;">Magdeburg</div>'
-        '<div style="font-size:0.6rem;color:#aaa;text-transform:uppercase;letter-spacing:0.13em;font-weight:600;">Smart City Dashboard</div>'
+        f'<div style="font-size:0.6rem;color:#aaa;text-transform:uppercase;letter-spacing:0.13em;font-weight:600;">{t("nav.brand_sub")}</div>'
         '</div>',
         unsafe_allow_html=True,
     )
+
+with lang_col:
+    _chosen = st.radio(
+        "",
+        ["DE", "EN"],
+        index=0 if st.session_state["lang"] == "de" else 1,
+        horizontal=True,
+        label_visibility="collapsed",
+        key="_lang_radio",
+    )
+    st.session_state["lang"] = _chosen.lower()
 
 for col, (page_file, label, url_path, color), gif_src in zip(nav_cols, _NAV, _GIFS):
     active = (current == url_path)

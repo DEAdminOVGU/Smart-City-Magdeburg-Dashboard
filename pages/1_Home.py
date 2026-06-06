@@ -13,6 +13,7 @@ from utils.live_api import (
 )
 from utils.data_loader import load_kiss
 from utils.ui_helpers import section_header, topic_card
+from utils.i18n import t
 
 # ── Icon assets ───────────────────────────────────────────────────────────────
 def _b64_img(rel_path: str, size: str = "2rem") -> str:
@@ -54,9 +55,9 @@ def day_label(date_str: str) -> str:
     try:
         d = date.fromisoformat(date_str[:10])
         if d == date.today():
-            return "Today"
+            return t("day.today")
         if d == date.today() + timedelta(days=1):
-            return "Tomorrow"
+            return t("day.tomorrow")
         return d.strftime("%A")
     except Exception:
         return date_str[:10]
@@ -102,10 +103,10 @@ st.markdown(f"""
 ">
   <div style="position:relative;padding:38px 40px 32px 36px;max-width:560px;">
     <div style="font-size:2rem;font-weight:900;color:#1A1A1A;line-height:1.15;">
-      Good day, Magdeburg 👋
+      {t("home.title")}
     </div>
     <div style="font-size:1rem;color:#475569;margin-top:8px;line-height:1.55;">
-      Your city at a glance — live conditions, news, events, and city services.
+      {t("home.subtitle")}
     </div>
   </div>
 </div>
@@ -156,7 +157,7 @@ else:
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 2 + 3: WEATHER + LIVE PULSE (side by side)
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Weather & Live Conditions"), unsafe_allow_html=True)
+st.markdown(section_header(t("home.sec.weather")), unsafe_allow_html=True)
 
 weather_col, pulse_col = st.columns([3, 2], gap="large")
 
@@ -227,9 +228,9 @@ with pulse_col:
     <div style="flex-shrink:0;font-size:2.6rem;line-height:1;">☀️</div>
     <div>
       <div style="font-size:0.68rem;font-weight:800;color:#999;text-transform:uppercase;
-                  letter-spacing:0.1em;margin-bottom:4px;">UV Index</div>
+                  letter-spacing:0.1em;margin-bottom:4px;">{t("pulse.uv")}</div>
       <div style="font-size:1.8rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{_uv_val}</div>
-      <div style="font-size:0.78rem;color:#999;margin-top:4px;">Risk level: {uv_risk}</div>
+      <div style="font-size:0.78rem;color:#999;margin-top:4px;">{t("pulse.uv.sub", risk=uv_risk)}</div>
     </div>
   </div>
 </div>
@@ -247,9 +248,9 @@ with pulse_col:
     <div style="flex-shrink:0;font-size:2.6rem;line-height:1;">🌊</div>
     <div>
       <div style="font-size:0.68rem;font-weight:800;color:#999;text-transform:uppercase;
-                  letter-spacing:0.1em;margin-bottom:4px;">Elbe Water Level</div>
+                  letter-spacing:0.1em;margin-bottom:4px;">{t("pulse.elbe")}</div>
       <div style="font-size:1.8rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{_elbe_val}</div>
-      <div style="font-size:0.78rem;color:#999;margin-top:4px;">Flood alert: &gt; 400 cm</div>
+      <div style="font-size:0.78rem;color:#999;margin-top:4px;">{t("pulse.elbe.sub")}</div>
     </div>
   </div>
 </div>
@@ -267,9 +268,9 @@ with pulse_col:
     <div style="flex-shrink:0;">{AIR_ICON}</div>
     <div>
       <div style="font-size:0.68rem;font-weight:800;color:#999;text-transform:uppercase;
-                  letter-spacing:0.1em;margin-bottom:4px;">PM2.5 Air Quality</div>
+                  letter-spacing:0.1em;margin-bottom:4px;">{t("pulse.pm25")}</div>
       <div style="font-size:1.8rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{_pm_val}</div>
-      <div style="font-size:0.78rem;color:#999;margin-top:4px;">WHO guideline: 35 µg/m³</div>
+      <div style="font-size:0.78rem;color:#999;margin-top:4px;">{t("pulse.pm25.sub")}</div>
     </div>
   </div>
 </div>
@@ -280,7 +281,7 @@ with pulse_col:
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 4: TODAY'S TIPS
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Today's Recommendations"), unsafe_allow_html=True)
+st.markdown(section_header(t("home.sec.reco")), unsafe_allow_html=True)
 
 tips = []
 if cond and any(k in cond.lower() for k in ["rain", "sleet", "hail"]):
@@ -318,7 +319,7 @@ st.markdown(f"""
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 5: CITY NEWS
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("City News & Updates"), unsafe_allow_html=True)
+st.markdown(section_header(t("home.sec.news")), unsafe_allow_html=True)
 
 if news_items:
     news_cols = st.columns(2)
@@ -349,13 +350,13 @@ if news_items:
     st.caption("Source: Landeshauptstadt Magdeburg — City Press Office RSS feed")
 
 else:
-    st.info("Live news feed unavailable — visit magdeburg.de for the latest city news.")
+    st.info(t("home.news.offline"))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 6: CITY AT A GLANCE
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("City at a Glance"), unsafe_allow_html=True)
-st.caption("Latest headline figures from each topic — click a tile to explore in depth.")
+st.markdown(section_header(t("home.sec.glance")), unsafe_allow_html=True)
+st.caption(t("home.glance.cap"))
 
 TOPIC_COLORS = {
     "population": "#1565C0",
@@ -374,11 +375,11 @@ with glance_cols[0]:
         p_ly = int(df_city[df_city["Jahr"] == ly]["Hauptwohnsitzbevölkerung"].iloc[-1])
         p_py = int(df_city[df_city["Jahr"] == py]["Hauptwohnsitzbevölkerung"].iloc[-1])
         diff = p_ly - p_py
-        card_html = topic_card("🏘️", "Population", f"{p_ly/1000:.0f}k", "residents",
+        card_html = topic_card("🏘️", t("tile.population"), f"{p_ly/1000:.0f}k", t("tile.pop.unit"),
                                f"{abs(diff):,} vs {py}".replace(",", "."), diff >= 0,
                                str(ly), color=TOPIC_COLORS["population"], href="/population")
     except Exception:
-        card_html = topic_card("🏘️", "Population", "—", "residents", "no data", True,
+        card_html = topic_card("🏘️", t("tile.population"), "—", t("tile.pop.unit"), "—", True,
                                "—", color=TOPIC_COLORS["population"], href="/population")
     st.markdown(card_html, unsafe_allow_html=True)
 
@@ -392,11 +393,11 @@ with glance_cols[1]:
         v_ly = float(df_m[df_m["Jahr"] == ly]["_v"].iloc[-1])
         v_py = float(df_m[df_m["Jahr"] == py]["_v"].iloc[-1]) if py in df_m["Jahr"].values else v_ly
         diff_pct = (v_ly - v_py) / v_py * 100 if v_py else 0
-        card_html = topic_card("🚌", "Navigation", f"{v_ly/1e6:.0f}M", "MVB riders/year",
+        card_html = topic_card("🚌", t("tile.navigation"), f"{v_ly/1e6:.0f}M", t("tile.nav.unit"),
                                f"{abs(diff_pct):.1f}% vs {py}", diff_pct >= 0,
                                str(ly), color=TOPIC_COLORS["navigation"], href="/navigation")
     except Exception:
-        card_html = topic_card("🚌", "Navigation", "—", "MVB riders/year", "no data", True,
+        card_html = topic_card("🚌", t("tile.navigation"), "—", t("tile.nav.unit"), "—", True,
                                "—", color=TOPIC_COLORS["navigation"], href="/navigation")
     st.markdown(card_html, unsafe_allow_html=True)
 
@@ -411,38 +412,38 @@ with glance_cols[2]:
         a_ly = int(yr_totals[ly])
         a_py = int(yr_totals[py]) if py in yr_totals.index else a_ly
         diff_pct = (a_ly - a_py) / a_py * 100 if a_py else 0
-        card_html = topic_card("🏛️", "City & Culture", f"{a_ly/1000:.0f}k", "guest arrivals",
+        card_html = topic_card("🏛️", t("tile.city"), f"{a_ly/1000:.0f}k", t("tile.city.unit"),
                                f"{abs(diff_pct):.1f}% vs {py}", diff_pct >= 0,
                                str(ly), color=TOPIC_COLORS["city"], href="/city")
     except Exception:
-        card_html = topic_card("🏛️", "City & Culture", "—", "guest arrivals", "no data", True,
+        card_html = topic_card("🏛️", t("tile.city"), "—", t("tile.city.unit"), "—", True,
                                "—", color=TOPIC_COLORS["city"], href="/city")
     st.markdown(card_html, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 7: CITY SERVICES & CONTACTS
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("City Services & Contacts"), unsafe_allow_html=True)
+st.markdown(section_header(t("home.sec.services")), unsafe_allow_html=True)
 
 _CONTACTS = [
-    {"icon": _FIRE_ICON,   "name": "Emergency (Fire / Ambulance)", "number": "112",
-     "detail": "European emergency number — free from any phone.", "color": "#C0392B"},
-    {"icon": _POLICE_ICON, "name": "Police Emergency", "number": "110",
-     "detail": "German police emergency number.", "color": "#1565C0"},
-    {"icon": "🏥",         "name": "Medical On-Call", "number": "116 117",
-     "detail": "Ärztlicher Bereitschaftsdienst — non-emergency medical help.", "color": "#DC2626"},
-    {"icon": _BLDG_ICON,   "name": "City Hall (Rathaus)", "number": "+49 391 540-0",
-     "detail": "General enquiries · Mon–Fri 08:00–18:00", "color": "#007A6E"},
-    {"icon": _BUS_ICON,    "name": "MVB Public Transport", "number": "+49 391 886-0",
-     "detail": "Tram & bus info, journey planner: mvbnet.de", "color": "#6A1B9A"},
-    {"icon": "💡",         "name": "Stadtwerke Magdeburg", "number": "+49 391 587-0",
-     "detail": "Gas, electricity, heating and water services.", "color": "#F59E0B"},
-    {"icon": "🔧",         "name": "City Maintenance", "number": "+49 391 540-2233",
-     "detail": "Report road defects, broken streetlights, and public space issues.", "color": "#78716C"},
-    {"icon": "📚",         "name": "City Library", "number": "+49 391 540-4506",
-     "detail": "Stadtbibliothek Magdeburg · Mon–Sat 10:00–19:00", "color": "#0891B2"},
-    {"icon": "ℹ️",        "name": "Tourist Information", "number": "+49 391 8380-430",
-     "detail": "Am Alten Markt 9 · tourismusmagdeburg.de", "color": "#2E7D32"},
+    {"icon": _FIRE_ICON,   "name": t("svc.emergency"),  "number": "112",
+     "detail": t("svc.emergency.detail"),  "color": "#C0392B"},
+    {"icon": _POLICE_ICON, "name": t("svc.police"),     "number": "110",
+     "detail": t("svc.police.detail"),     "color": "#1565C0"},
+    {"icon": "🏥",         "name": t("svc.medical"),    "number": "116 117",
+     "detail": t("svc.medical.detail"),    "color": "#DC2626"},
+    {"icon": _BLDG_ICON,   "name": t("svc.cityhall"),   "number": "+49 391 540-0",
+     "detail": t("svc.cityhall.detail"),   "color": "#007A6E"},
+    {"icon": _BUS_ICON,    "name": t("svc.mvb"),        "number": "+49 391 886-0",
+     "detail": t("svc.mvb.detail"),        "color": "#6A1B9A"},
+    {"icon": "💡",         "name": t("svc.stadtwerke"), "number": "+49 391 587-0",
+     "detail": t("svc.stadtwerke.detail"), "color": "#F59E0B"},
+    {"icon": "🔧",         "name": t("svc.maintenance"),"number": "+49 391 540-2233",
+     "detail": t("svc.maintenance.detail"),"color": "#78716C"},
+    {"icon": "📚",         "name": t("svc.library"),    "number": "+49 391 540-4506",
+     "detail": t("svc.library.detail"),    "color": "#0891B2"},
+    {"icon": "ℹ️",        "name": t("svc.tourist"),    "number": "+49 391 8380-430",
+     "detail": t("svc.tourist.detail"),    "color": "#2E7D32"},
 ]
 
 _cc = st.columns(3)
@@ -465,7 +466,7 @@ for i, c in enumerate(_CONTACTS):
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 8: CITY MAP
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Explore Magdeburg"), unsafe_allow_html=True)
+st.markdown(section_header(t("home.sec.explore")), unsafe_allow_html=True)
 
 landmarks = [
     (52.1316, 11.6397, "Dom", "🏛️ Magdeburg Cathedral — 13th century Gothic landmark."),
