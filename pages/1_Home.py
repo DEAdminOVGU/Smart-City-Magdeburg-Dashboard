@@ -25,9 +25,10 @@ def _b64_img(rel_path: str, size: str = "2rem") -> str:
     except Exception:
         return "🌡️"
 
-TEMP_ICON = _b64_img("utils/icons/temperature.gif", "3rem")
-WIND_ICON = _b64_img("utils/icons/wind.gif",        "3rem")
-AIR_ICON  = _b64_img("utils/icons/airquality.gif",  "3rem")
+TEMP_ICON  = _b64_img("utils/icons/temperature.gif", "3rem")
+WIND_ICON  = _b64_img("utils/icons/wind.gif",        "3rem")
+AIR_ICON   = _b64_img("utils/icons/airquality.gif",  "3rem")
+ALERT_ICON = _b64_img("utils/icons/alert.gif",       "2.2rem")
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -119,12 +120,30 @@ if wind_spd is not None and wind_spd > 60:
 
 if alerts:
     for level_label, msg, alert_type in alerts:
-        if alert_type == "error":
-            st.error(f"**{level_label}** — {msg}")
-        else:
-            st.warning(f"**{level_label}** — {msg}")
+        bg    = "#FFF1F2" if alert_type == "error" else "#FFFBEB"
+        border = "#EF4444" if alert_type == "error" else "#F59E0B"
+        st.markdown(f"""
+<div style="background:{bg};border-left:4px solid {border};border-radius:0 12px 12px 0;
+            padding:14px 18px;margin-bottom:10px;
+            display:flex;align-items:center;gap:14px;">
+  <div style="flex-shrink:0;">{ALERT_ICON}</div>
+  <div>
+    <div style="font-size:0.82rem;font-weight:800;color:#1A1A1A;margin-bottom:3px;">{level_label}</div>
+    <div style="font-size:0.8rem;color:#374151;line-height:1.5;">{msg}</div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 else:
-    st.success("✅ **All Clear** — No active alerts for Magdeburg right now. Conditions are normal.")
+    st.markdown(f"""
+<div style="background:#F0FDF4;border-left:4px solid #22C55E;border-radius:0 12px 12px 0;
+            padding:14px 18px;margin-bottom:10px;
+            display:flex;align-items:center;gap:14px;">
+  <div style="flex-shrink:0;">{ALERT_ICON}</div>
+  <div style="font-size:0.82rem;font-weight:800;color:#15803D;">
+    All Clear — No active alerts for Magdeburg right now. Conditions are normal.
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 2 + 3: WEATHER + LIVE PULSE (side by side)
