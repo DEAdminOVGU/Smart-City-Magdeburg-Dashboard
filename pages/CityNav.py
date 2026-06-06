@@ -7,7 +7,9 @@ from folium.plugins import MarkerCluster, HeatMap
 import plotly.graph_objects as go
 import pandas as pd
 
-from utils.live_api   import fetch_weather, fetch_elbe_level
+from utils.live_api   import (fetch_weather, fetch_elbe_level,
+                               load_mvb_stops, fetch_departures,
+                               fetch_service_disruptions)
 from utils.overpass   import fetch_parking, fetch_charging, fetch_transit_stops
 from utils.ui_helpers import section_header, live_card
 from utils.constants  import PLOTLY_TEMPLATE
@@ -68,6 +70,10 @@ if cond and any(k in cond.lower() for k in ["rain", "hail", "sleet"]):
     alerts.append(("🌧️ Wet Road Conditions",
                    "Rain or precipitation active — stopping distances are longer. "
                    "Cyclists should use lights and avoid puddles near drains.", "info"))
+
+for d in fetch_service_disruptions():
+    affects_str = f" (affects: {d['affects']})" if d["affects"] else ""
+    alerts.append((f"🚌 {d['head']}", f"{d['text']}{affects_str}", "warning"))
 
 if alerts:
     for label, msg, kind in alerts:
@@ -403,3 +409,101 @@ if accident_pts:
 </div>
 """, unsafe_allow_html=True)
     st.caption("Source: Unfallatlas / Statistische Ämter — road traffic accidents reported to police")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 5: LIVE DEPARTURES
+# ─────────────────────────────────────────────────────────────────────────────
+st.markdown(section_header("Live Departures — MVB", color=NAV_ORANGE), unsafe_allow_html=True)
+
+mvb_stops = load_mvb_stops()
+if mvb_stops:
+    sel_col, hint_col = st.columns([4, 1])
+    with sel_col:
+        sel_idx = st.selectbox(
+            "stop",
+            options=range(len(mvb_stops)),
+            format_func=lambda i: mvb_stops[i]["name"],
+            index=None,
+            placeholder="Choose a stop…",
+            label_visibility="collapsed",
+        )
+    with hint_col:
+        st.caption("🔄 updates every 60 s")
+
+    if sel_idx is not None:
+        selected_stop = mvb_stops[sel_idx]
+        with st.spinner(f"Fetching departures from {selected_stop['name']}…"):
+            deps = fetch_departures(selected_stop["ext_id"])
+
+        if deps:
+            rows_html = ""
+            for d in deps:
+                delay_min = d["delay_min"]
+                cancelled = d["cancelled"]
+                if cancelled:
+                    row_bg    = "background:#FFF1F2;"
+                    name_sty  = "text-decoration:line-through;color:#999;"
+                    delay_html = '<span style="color:#C0392B;font-weight:700;">Cancelled</span>'
+                else:
+                    row_bg   = ""
+                    name_sty = ""
+                    if delay_min is None or delay_min <= 0:
+                        delay_html = '<span style="color:#2E7D32;font-weight:700;">On time</span>'
+                    elif delay_min <= 5:
+                        delay_html = f'<span style="color:#E8650B;font-weight:700;">+{delay_min} min</span>'
+                    else:
+                        delay_html = f'<span style="color:#C0392B;font-weight:700;">+{delay_min} min</span>'
+
+                rt_cell  = d["rt_time"] if d["rt_time"] and d["rt_time"] != d["time"] else "—"
+                plat_cell = d["platform"] if d["platform"] else "—"
+                rows_html += f"""
+<tr style="{row_bg}border-bottom:1px solid #f1f5f9;">
+  <td style="padding:8px 12px;font-weight:700;color:{NAV_ORANGE};white-space:nowrap;{name_sty}">{d['line']}</td>
+  <td style="padding:8px 12px;color:#374151;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{d['direction']}</td>
+  <td style="padding:8px 12px;font-family:monospace;color:#374151;">{d['time']}</td>
+  <td style="padding:8px 12px;font-family:monospace;color:#374151;">{rt_cell}</td>
+  <td style="padding:8px 12px;">{delay_html}</td>
+  <td style="padding:8px 12px;color:#94a3b8;text-align:center;">{plat_cell}</td>
+</tr>"""
+
+            st.markdown(f"""
+<div style="background:#fff;border-radius:12px;overflow:hidden;
+            box-shadow:0 2px 12px rgba(0,0,0,0.06);margin-bottom:8px;">
+  <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
+    <thead>
+      <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+        <th style="padding:10px 12px;text-align:left;font-size:0.68rem;text-transform:uppercase;
+                   letter-spacing:0.1em;color:#64748b;font-weight:800;">Line</th>
+        <th style="padding:10px 12px;text-align:left;font-size:0.68rem;text-transform:uppercase;
+                   letter-spacing:0.1em;color:#64748b;font-weight:800;">Direction</th>
+        <th style="padding:10px 12px;text-align:left;font-size:0.68rem;text-transform:uppercase;
+                   letter-spacing:0.1em;color:#64748b;font-weight:800;">Scheduled</th>
+        <th style="padding:10px 12px;text-align:left;font-size:0.68rem;text-transform:uppercase;
+                   letter-spacing:0.1em;color:#64748b;font-weight:800;">Real-time</th>
+        <th style="padding:10px 12px;text-align:left;font-size:0.68rem;text-transform:uppercase;
+                   letter-spacing:0.1em;color:#64748b;font-weight:800;">Delay</th>
+        <th style="padding:10px 12px;text-align:center;font-size:0.68rem;text-transform:uppercase;
+                   letter-spacing:0.1em;color:#64748b;font-weight:800;">Track</th>
+      </tr>
+    </thead>
+    <tbody>{rows_html}</tbody>
+  </table>
+</div>
+""", unsafe_allow_html=True)
+            st.caption(
+                f"Departures from {selected_stop['name']} · "
+                "Real-time data via NASA HAFAS REST API · refreshes every 60 s"
+            )
+        else:
+            st.info(
+                "No departure data available for this stop. "
+                "The stop may not have live departures or the HAFAS service is currently unavailable."
+            )
+    else:
+        st.markdown(
+            '<div style="color:#94a3b8;font-size:0.88rem;padding:12px 0;">'
+            'Select a stop above to view live departures.</div>',
+            unsafe_allow_html=True,
+        )
+else:
+    st.info("Stop list unavailable — could not load MVB GTFS data.")

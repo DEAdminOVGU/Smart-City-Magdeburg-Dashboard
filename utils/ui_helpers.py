@@ -1,4 +1,21 @@
 """Shared HTML components for the Smart City Magdeburg Dashboard."""
+import base64
+import os
+
+
+def b64_icon(rel_path: str, size: str = "2rem", fallback: str = "") -> str:
+    """Load an image from utils/icons/ and return an <img> tag for inline HTML use."""
+    _base = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+    _p = os.path.normpath(os.path.join(_base, rel_path))
+    try:
+        with open(_p, "rb") as _f:
+            _b = base64.b64encode(_f.read()).decode()
+        ext  = os.path.splitext(_p)[1].lstrip(".")
+        mime = "image/gif" if ext == "gif" else f"image/{ext}"
+        return (f"<img src='data:{mime};base64,{_b}' "
+                f"style='width:{size};height:{size};object-fit:contain;vertical-align:middle;'>")
+    except Exception:
+        return fallback
 
 
 def hero_stat(icon: str, value: str, description: str,
@@ -25,8 +42,9 @@ def hero_stat(icon: str, value: str, description: str,
 def topic_card(icon: str, title: str, value: str, unit: str,
                delta_text: str, delta_positive: bool,
                year: str, color: str = "#007A6E",
-               status: str = None, subtext: str = None) -> str:
-    """Topic card for the Home page grid."""
+               status: str = None, subtext: str = None,
+               href: str = None) -> str:
+    """Topic card for the Home page grid. Pass href to make the card clickable."""
     arrow = "↑" if delta_positive else "↓"
     delta_color = "#1B5E20" if delta_positive else "#B71C1C"
     delta_bg = "#E8F5E9" if delta_positive else "#FFEBEE"
@@ -47,40 +65,54 @@ def topic_card(icon: str, title: str, value: str, unit: str,
             f'<div style="font-size:0.72rem;color:#94a3b8;margin-top:4px;'
             f'line-height:1.4;">{subtext}</div>'
         )
-    return f"""
-<div style="background:#fff;border-radius:14px;padding:22px 18px;
-            box-shadow:0 2px 16px rgba(0,0,0,0.07);
-            border-top:4px solid {color};margin-bottom:4px;">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-    <span style="font-size:1.8rem;line-height:1;">{icon}</span>
-    <span style="font-size:0.68rem;color:#bbb;font-weight:700;
-                 text-transform:uppercase;letter-spacing:0.06em;">{year}</span>
-  </div>
-  <div style="font-size:0.7rem;font-weight:800;color:#999;text-transform:uppercase;
-              letter-spacing:0.12em;margin-bottom:5px;">{title}{status_html}</div>
-  <div style="font-size:2rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{value}</div>
-  <div style="font-size:0.78rem;color:#bbb;margin-top:3px;margin-bottom:14px;">{unit}</div>
-  <div style="display:inline-block;background:{delta_bg};color:{delta_color};
-              border-radius:16px;padding:3px 12px;font-size:0.76rem;font-weight:700;">
-    {arrow}&nbsp;{delta_text}
-  </div>
-  {subtext_html}
-</div>
-"""
+    click_attrs = (
+        f'onclick="window.location.href=\'{href}\'" '
+        f'style="cursor:pointer;" '
+    ) if href else 'style=""'
+    return (
+        f'<div {click_attrs}>'
+        f'<div style="background:#fff;border-radius:14px;padding:20px 18px;'
+        f'box-shadow:0 2px 16px rgba(0,0,0,0.07);'
+        f'border-top:4px solid {color};margin-bottom:4px;">'
+        f'<div style="display:flex;align-items:flex-start;gap:14px;">'
+        f'<div style="flex-shrink:0;font-size:2rem;line-height:1;margin-top:2px;">{icon}</div>'
+        f'<div style="flex:1;min-width:0;">'
+        f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
+        f'<div style="font-size:0.7rem;font-weight:800;color:#999;text-transform:uppercase;'
+        f'letter-spacing:0.12em;">{title}{status_html}</div>'
+        f'<span style="font-size:0.68rem;color:#bbb;font-weight:700;'
+        f'text-transform:uppercase;letter-spacing:0.06em;">{year}</span>'
+        f'</div>'
+        f'<div style="font-size:1.9rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{value}</div>'
+        f'<div style="font-size:0.78rem;color:#bbb;margin-top:2px;margin-bottom:12px;">{unit}</div>'
+        f'<div style="display:inline-block;background:{delta_bg};color:{delta_color};'
+        f'border-radius:16px;padding:3px 12px;font-size:0.76rem;font-weight:700;">'
+        f'{arrow}&nbsp;{delta_text}'
+        f'</div>'
+        f'{subtext_html}'
+        f'</div>'
+        f'</div>'
+        f'</div>'
+        f'</div>'
+    )
 
 
 def live_card(icon: str, title: str, value: str, subtitle: str,
               status_color: str = "#007A6E") -> str:
-    """Compact live-data indicator card."""
+    """Compact live-data indicator card — horizontal layout (icon left, text right)."""
     return f"""
 <div style="background:#fff;border-radius:12px;padding:18px 16px;
             box-shadow:0 2px 12px rgba(0,0,0,0.06);
             border-left:4px solid {status_color};margin-bottom:4px;">
-  <div style="font-size:1.5rem;line-height:1;margin-bottom:6px;">{icon}</div>
-  <div style="font-size:0.68rem;font-weight:800;color:#999;text-transform:uppercase;
-              letter-spacing:0.1em;margin-bottom:4px;">{title}</div>
-  <div style="font-size:1.8rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{value}</div>
-  <div style="font-size:0.78rem;color:#999;margin-top:4px;">{subtitle}</div>
+  <div style="display:flex;align-items:center;gap:14px;">
+    <div style="flex-shrink:0;font-size:1.8rem;line-height:1;">{icon}</div>
+    <div>
+      <div style="font-size:0.68rem;font-weight:800;color:#999;text-transform:uppercase;
+                  letter-spacing:0.1em;margin-bottom:4px;">{title}</div>
+      <div style="font-size:1.8rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{value}</div>
+      <div style="font-size:0.78rem;color:#999;margin-top:4px;">{subtitle}</div>
+    </div>
+  </div>
 </div>
 """
 

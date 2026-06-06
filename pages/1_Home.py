@@ -410,106 +410,101 @@ st.caption("Latest headline figures from each topic — click a tile to explore 
 TOPIC_COLORS = {
     "climate":    "#00897B",
     "population": "#1565C0",
-    "mobility":   "#6A1B9A",
-    "economy":    "#2E7D32",
-    "health":     "#C0392B",
+    "navigation": "#D4481C",
+    "city":       "#6D28D9",
+    "env":        "#2E7D32",
 }
 
 glance_cols = st.columns(5)
 
+# Tile 1: Climate — annual mean temperature
 with glance_cols[0]:
     try:
-        df_c = load_kiss("klima/jaehrliche-temperaturen-magdeburg.json")
-        df_c["var2"] = pd.to_numeric(df_c.get("var2", df_c.iloc[:, 1]), errors="coerce")
-        df_c = df_c[df_c["var2"].notna()]
+        df_c = load_kiss("wetter/witterung-in-magdeburg.json")
+        df_c = df_c[df_c["Lufttemperatur Jahresmittel"].notna()].sort_values("Jahr")
         ly = int(df_c["Jahr"].max()); py = ly - 1
-        t_ly = float(df_c[df_c["Jahr"] == ly]["var2"].iloc[0])
-        t_py = float(df_c[df_c["Jahr"] == py]["var2"].iloc[0])
+        t_ly = float(df_c[df_c["Jahr"] == ly]["Lufttemperatur Jahresmittel"].iloc[0])
+        t_py = float(df_c[df_c["Jahr"] == py]["Lufttemperatur Jahresmittel"].iloc[0])
         diff = t_ly - t_py
-        card_html = topic_card("🌡️", "Climate", f"{t_ly:.1f}", "°C avg",
+        card_html = topic_card("🌡️", "Climate", f"{t_ly:.1f}", "°C annual mean",
                                f"{abs(diff):.1f}°C vs {py}", diff >= 0,
-                               str(ly), color=TOPIC_COLORS["climate"])
+                               str(ly), color=TOPIC_COLORS["climate"], href="/climate")
     except Exception:
-        card_html = topic_card("🌡️", "Climate", "—", "°C avg", "no data", True,
-                               "—", color=TOPIC_COLORS["climate"])
-    st.markdown(f'<a href="/climate" style="text-decoration:none;">{card_html}</a>',
-                unsafe_allow_html=True)
+        card_html = topic_card("🌡️", "Climate", "—", "°C annual mean", "no data", True,
+                               "—", color=TOPIC_COLORS["climate"], href="/climate")
+    st.markdown(card_html, unsafe_allow_html=True)
 
+# Tile 2: Population — registered residents (city total)
 with glance_cols[1]:
     try:
-        df_p = load_kiss("bevoelkerung/einwohnerinnen-und-einwohner.json")
-        df_p = df_p.rename(columns={"var2": "Pop"})
-        df_p = df_p[df_p["Pop"].notna()].sort_values("Jahr")
-        ly = int(df_p["Jahr"].max()); py = ly - 1
-        p_ly = int(df_p[df_p["Jahr"] == ly]["Pop"].iloc[-1])
-        p_py = int(df_p[df_p["Jahr"] == py]["Pop"].iloc[-1]) if py in df_p["Jahr"].values else p_ly
+        df_p = load_kiss("bevoelkerung/entwicklung-der-hauptwohnsitzbevoelkerung.json")
+        df_city = df_p[df_p["Stadtteil-Nr."] == 15003].sort_values("Jahr")
+        ly = int(df_city["Jahr"].max()); py = ly - 1
+        p_ly = int(df_city[df_city["Jahr"] == ly]["Hauptwohnsitzbevölkerung"].iloc[-1])
+        p_py = int(df_city[df_city["Jahr"] == py]["Hauptwohnsitzbevölkerung"].iloc[-1])
         diff = p_ly - p_py
         card_html = topic_card("🏘️", "Population", f"{p_ly/1000:.0f}k", "residents",
                                f"{abs(diff):,} vs {py}".replace(",", "."), diff >= 0,
-                               str(ly), color=TOPIC_COLORS["population"])
+                               str(ly), color=TOPIC_COLORS["population"], href="/population")
     except Exception:
         card_html = topic_card("🏘️", "Population", "—", "residents", "no data", True,
-                               "—", color=TOPIC_COLORS["population"])
-    st.markdown(f'<a href="/population" style="text-decoration:none;">{card_html}</a>',
-                unsafe_allow_html=True)
+                               "—", color=TOPIC_COLORS["population"], href="/population")
+    st.markdown(card_html, unsafe_allow_html=True)
 
+# Tile 3: Navigation — MVB annual ridership
 with glance_cols[2]:
     try:
-        df_m = load_kiss("verkehr/kraftfahrzeuge.json")
-        num_cols = [c for c in df_m.columns if pd.to_numeric(df_m[c], errors="coerce").notna().sum() > 5]
-        val_col = num_cols[0] if num_cols else df_m.columns[1]
-        df_m["_v"] = pd.to_numeric(df_m[val_col], errors="coerce")
+        df_m = load_kiss("verkehr/befoerderte-personen-der-magdeburger-verkehrsbetriebe-gmbh-und-co-kg.json")
+        df_m["_v"] = pd.to_numeric(df_m["var2"], errors="coerce")
         df_m = df_m[df_m["_v"].notna()].sort_values("Jahr")
         ly = int(df_m["Jahr"].max()); py = ly - 1
-        v_ly = int(df_m[df_m["Jahr"] == ly]["_v"].iloc[-1])
-        v_py = int(df_m[df_m["Jahr"] == py]["_v"].iloc[-1]) if py in df_m["Jahr"].values else v_ly
-        diff = v_ly - v_py
-        card_html = topic_card("🚌", "Mobility", f"{v_ly/1000:.0f}k", "vehicles",
-                               f"{abs(diff):,} vs {py}".replace(",", "."), diff >= 0,
-                               str(ly), color=TOPIC_COLORS["mobility"])
+        v_ly = float(df_m[df_m["Jahr"] == ly]["_v"].iloc[-1])
+        v_py = float(df_m[df_m["Jahr"] == py]["_v"].iloc[-1]) if py in df_m["Jahr"].values else v_ly
+        diff_pct = (v_ly - v_py) / v_py * 100 if v_py else 0
+        card_html = topic_card("🚌", "Navigation", f"{v_ly/1e6:.0f}M", "MVB riders/year",
+                               f"{abs(diff_pct):.1f}% vs {py}", diff_pct >= 0,
+                               str(ly), color=TOPIC_COLORS["navigation"], href="/navigation")
     except Exception:
-        card_html = topic_card("🚌", "Mobility", "—", "vehicles", "no data", True,
-                               "—", color=TOPIC_COLORS["mobility"])
-    st.markdown(f'<a href="/mobility" style="text-decoration:none;">{card_html}</a>',
-                unsafe_allow_html=True)
+        card_html = topic_card("🚌", "Navigation", "—", "MVB riders/year", "no data", True,
+                               "—", color=TOPIC_COLORS["navigation"], href="/navigation")
+    st.markdown(card_html, unsafe_allow_html=True)
 
+# Tile 4: City & Culture — annual tourist arrivals
 with glance_cols[3]:
     try:
-        df_eco = load_kiss("wirtschaft/steuereinnahmen.json")
-        eco_num = [c for c in df_eco.columns
-                   if pd.to_numeric(df_eco[c], errors="coerce").notna().sum() > 5]
-        val_col = eco_num[0] if eco_num else df_eco.columns[1]
-        df_eco["_t"] = pd.to_numeric(df_eco[val_col], errors="coerce")
-        df_eco = df_eco[df_eco["_t"].notna()].sort_values("Jahr")
-        ly = int(df_eco["Jahr"].max()); py = ly - 1
-        t_ly = float(df_eco[df_eco["Jahr"] == ly]["_t"].iloc[-1])
-        t_py = float(df_eco[df_eco["Jahr"] == py]["_t"].iloc[-1]) if py in df_eco["Jahr"].values else t_ly
-        diff_pct = (t_ly - t_py) / t_py * 100 if t_py else 0
-        card_html = topic_card("💶", "Economy", f"€{t_ly/1e6:.0f}M", "tax revenue",
+        df_t = load_kiss("erholung-sport-und-fremdenverkehr/ankuenfte-der-gaeste-in-magdeburg.json")
+        df_t["_a"] = pd.to_numeric(df_t["Ankünfte gesamt"], errors="coerce")
+        yr_totals = df_t[df_t["_a"].notna()].groupby("Jahr")["_a"].sum()
+        yr_totals = yr_totals[yr_totals > 100_000]  # exclude partial years
+        ly = int(yr_totals.index.max()); py = ly - 1
+        a_ly = int(yr_totals[ly])
+        a_py = int(yr_totals[py]) if py in yr_totals.index else a_ly
+        diff_pct = (a_ly - a_py) / a_py * 100 if a_py else 0
+        card_html = topic_card("✈️", "City & Culture", f"{a_ly/1000:.0f}k", "tourist arrivals",
                                f"{abs(diff_pct):.1f}% vs {py}", diff_pct >= 0,
-                               str(ly), color=TOPIC_COLORS["economy"])
+                               str(ly), color=TOPIC_COLORS["city"], href="/city")
     except Exception:
-        card_html = topic_card("💶", "Economy", "—", "tax revenue", "no data", True,
-                               "—", color=TOPIC_COLORS["economy"])
-    st.markdown(f'<a href="/economy" style="text-decoration:none;">{card_html}</a>',
-                unsafe_allow_html=True)
+        card_html = topic_card("✈️", "City & Culture", "—", "tourist arrivals", "no data", True,
+                               "—", color=TOPIC_COLORS["city"], href="/city")
+    st.markdown(card_html, unsafe_allow_html=True)
 
+# Tile 5: Environment — PM10 annual mean air quality
 with glance_cols[4]:
     try:
-        df_h = load_kiss("gesundheit-und-soziales/rettungsdienst-einsaetze.json")
-        df_h = df_h.rename(columns={"Rettungsdienst-Einsätze gesamt": "Total"})
-        ly = int(df_h["Jahr"].max()); py = ly - 1
-        h_ly = int(df_h[df_h["Jahr"] == ly]["Total"].sum())
-        h_py = int(df_h[df_h["Jahr"] == py]["Total"].sum())
-        diff_pct = (h_ly - h_py) / h_py * 100 if h_py else 0
-        card_html = topic_card("🏥", "Health", f"{h_ly/1000:.0f}k", "emergency ops",
-                               f"{abs(diff_pct):.1f}% vs {py}", False,
-                               str(ly), color=TOPIC_COLORS["health"])
+        df_e = load_kiss("energie-und-umwelt/jahresmittelwerte-der-feinstaubpartikel-pm10.json")
+        df_e["_pm"] = pd.to_numeric(df_e["var3"], errors="coerce")
+        df_e = df_e[df_e["_pm"].notna()].sort_values("Jahr")
+        ly = int(df_e["Jahr"].max()); py = ly - 1
+        pm_ly = float(df_e[df_e["Jahr"] == ly]["_pm"].iloc[-1])
+        pm_py = float(df_e[df_e["Jahr"] == py]["_pm"].iloc[-1]) if py in df_e["Jahr"].values else pm_ly
+        diff = pm_ly - pm_py
+        card_html = topic_card("🍃", "Environment", f"{pm_ly:.0f}", "µg/m³ PM10",
+                               f"{abs(diff):.0f} µg/m³ vs {py}", diff <= 0,
+                               str(ly), color=TOPIC_COLORS["env"], href="/climate")
     except Exception:
-        card_html = topic_card("🏥", "Health", "—", "emergency ops", "no data", True,
-                               "—", color=TOPIC_COLORS["health"])
-    st.markdown(f'<a href="/health" style="text-decoration:none;">{card_html}</a>',
-                unsafe_allow_html=True)
+        card_html = topic_card("🍃", "Environment", "—", "µg/m³ PM10", "no data", True,
+                               "—", color=TOPIC_COLORS["env"], href="/climate")
+    st.markdown(card_html, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 7: CITY MAP

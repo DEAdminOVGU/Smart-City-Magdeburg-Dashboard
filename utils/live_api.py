@@ -1,9 +1,44 @@
+import csv
+import io
+import os
+import zipfile
 import requests
 import streamlit as st
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from collections import defaultdict
+from dotenv import load_dotenv
 from utils.constants import LAT, LON
+
+load_dotenv()
+
+def _load_custom_env() -> None:
+    """Parse non-standard .env lines of the form 'API key name : KEY' / 'value  : VAL'."""
+    env_path = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".env"))
+    try:
+        with open(env_path) as _f:
+            lines = [l.rstrip("\n") for l in _f if l.strip()]
+        i = 0
+        while i < len(lines) - 1:
+            if ":" in lines[i] and ":" in lines[i + 1]:
+                key = lines[i].split(":", 1)[1].strip()
+                val = lines[i + 1].split(":", 1)[1].strip()
+                if key and val and not os.getenv(key):
+                    os.environ[key] = val
+                i += 2
+            else:
+                i += 1
+    except Exception:
+        pass
+
+_load_custom_env()
+
+_HAFAS_KEY  = os.getenv("NASA_HAFAS_API_KEY", "")
+_HAFAS_BASE = os.getenv("HAFAS_BASE_URL", "https://nasa.demo.hafas.de/restproxy/2.49")
+_GTFS_ZIP   = os.path.normpath(os.path.join(
+    os.path.dirname(__file__), "..", "data",
+    "OEV-Daten_NASA_GmbH", "GTFS", "gtfs_mvb_std_kn.zip",
+))
 
 
 @st.cache_data(ttl=600)
@@ -120,3 +155,120 @@ def fetch_city_news() -> list:
         except Exception:
             continue
     return []
+
+
+@st.cache_data(ttl=86400, show_spinner=False)
+def load_mvb_stops() -> list:
+    """Load MVB stop list from static GTFS zip. Deduplicates by name, sorted A–Z."""
+    try:
+        with zipfile.ZipFile(_GTFS_ZIP) as z:
+            with z.open("stops.txt") as f:
+                reader = csv.DictReader(io.TextIOWrapper(f, encoding="utf-8"))
+                seen, stops = set(), []
+                for row in reader:
+                    name = row.get("stop_name", "").strip().strip('"')
+                    sid  = row.get("stop_id",   "").strip().strip('"')
+                    lat  = row.get("stop_lat",  "").strip().strip('"')
+                    lon  = row.get("stop_lon",  "").strip().strip('"')
+                    if name and sid and name not in seen:
+                        seen.add(name)
+                        stops.append({
+                            "name":   name,
+                            "ext_id": sid,
+                            "lat":    float(lat) if lat else None,
+                            "lon":    float(lon) if lon else None,
+                        })
+                return sorted(stops, key=lambda x: x["name"])
+    except Exception:
+        return []
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def fetch_departures(ext_id: str, max_journeys: int = 12) -> list:
+    """Fetch live departures from HAFAS departureBoard for a given stop extId."""
+    if not _HAFAS_KEY:
+        return []
+    try:
+        now = datetime.now()
+        r = requests.get(
+            f"{_HAFAS_BASE}/departureBoard",
+            params={
+                "extId":       ext_id,
+                "date":        now.strftime("%Y%m%d"),
+                "time":        now.strftime("%H%M"),
+                "maxJourneys": max_journeys,
+                "format":      "json",
+                "accessId":    _HAFAS_KEY,
+            },
+            timeout=8,
+        )
+        r.raise_for_status()
+        data = r.json()
+        if "errorCode" in data:
+            return []
+        departures = []
+        for dep in data.get("Departure", []):
+            sched = (dep.get("time") or "")[:5]
+            rt    = (dep.get("rtTime") or "")[:5]
+            delay_min = None
+            if rt and sched and rt != sched:
+                try:
+                    sh, sm = map(int, sched.split(":"))
+                    rh, rm = map(int, rt.split(":"))
+                    delay_min = (rh * 60 + rm) - (sh * 60 + sm)
+                    if delay_min < -120:
+                        delay_min += 1440
+                except ValueError:
+                    pass
+            departures.append({
+                "line":      dep.get("name", ""),
+                "direction": dep.get("direction", ""),
+                "time":      sched,
+                "rt_time":   rt,
+                "delay_min": delay_min,
+                "platform":  dep.get("platform") or dep.get("track") or "",
+                "cancelled": bool(dep.get("cancelled", False)),
+            })
+        return departures
+    except Exception:
+        return []
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_service_disruptions() -> list:
+    """Fetch active service disruptions from HAFAS HIM search."""
+    if not _HAFAS_KEY:
+        return []
+    try:
+        today = datetime.now().strftime("%Y%m%d")
+        r = requests.get(
+            f"{_HAFAS_BASE}/himsearch",
+            params={
+                "dateB":    today,
+                "dateE":    today,
+                "format":   "json",
+                "accessId": _HAFAS_KEY,
+            },
+            timeout=8,
+        )
+        r.raise_for_status()
+        data = r.json()
+        if "errorCode" in data:
+            return []
+        result = []
+        for him in data.get("him", [])[:5]:
+            head = him.get("head") or him.get("hd") or "Service Notice"
+            text = him.get("text") or him.get("tx") or ""
+            impacts = him.get("impactL") or []
+            line_names = [
+                i.get("name", "") for i in impacts
+                if i.get("type") == "LINE" and i.get("name")
+            ]
+            result.append({
+                "head":    str(head)[:80],
+                "text":    str(text)[:200],
+                "affects": ", ".join(line_names[:4]),
+            })
+        return result
+    except Exception:
+        return []

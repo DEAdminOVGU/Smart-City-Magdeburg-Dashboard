@@ -16,4 +16,5 @@ Sources
 - Climate data: German Meteorological Service (DWD), freely usable with source attribution (GeoNutzV)
 - Tax data: City of Magdeburg
 - Rental data: Data source: value-market database
-- Live APIs: respective providers (see live-sources/DATENQUELLEN.md)
+- Live APIs: respective providers (see live-sources/DATENQUELLEN.md
+- Icons: "https://www.flaticon.com/free-icons/"  icons created by Freepik - Flaticon

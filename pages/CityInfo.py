@@ -1,3 +1,5 @@
+import base64
+import os
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
@@ -9,6 +11,24 @@ from utils.constants import MD_TEAL, MD_ORANGE, PLOTLY_TEMPLATE, MONTHS_DE
 from utils.ui_helpers import hero_stat, section_header, insight_box, live_card
 
 CITY_PURPLE = "#6D28D9"
+
+# ── Icon helpers ──────────────────────────────────────────────────────────────
+def _b64_img(rel_path: str, size: str = "1.6rem") -> str:
+    _p = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", rel_path))
+    try:
+        with open(_p, "rb") as _f:
+            _b = base64.b64encode(_f.read()).decode()
+        ext  = os.path.splitext(_p)[1].lstrip(".")
+        mime = "image/gif" if ext == "gif" else f"image/{ext}"
+        return f"<img src='data:{mime};base64,{_b}' style='width:{size};height:{size};object-fit:contain;vertical-align:middle;'>"
+    except Exception:
+        return ""
+
+_FIRE    = _b64_img("utils/icons/fire-brigade.png")
+_POLICE  = _b64_img("utils/icons/policeman.png")
+_BUS     = _b64_img("utils/icons/bus.png")
+_BLDG    = _b64_img("utils/icons/historic-building.png")
+_FACTORY = _b64_img("utils/icons/factory.gif", "2.2rem")
 
 # ── Event helpers (moved from 1_Home.py) ─────────────────────────────────────
 _today = date.today()
@@ -262,7 +282,7 @@ ATTRACTIONS = [
         "badge_color": "#D97706",
     },
     {
-        "icon": "⚙️",
+        "icon": _FACTORY,
         "name": "Technikmuseum Magdeburg",
         "desc": "Industrial and technical heritage — steam engines, historic vehicles, "
                 "and machinery in a former factory building.",
@@ -444,15 +464,15 @@ st.caption("Source: Landeshauptstadt Magdeburg — Events calendar (magdeburg.de
 st.markdown(section_header("City Services & Contacts", color=CITY_PURPLE), unsafe_allow_html=True)
 
 contacts = [
-    {"icon": "🚒", "name": "Emergency (Fire / Ambulance)", "number": "112",
+    {"icon": _FIRE,   "name": "Emergency (Fire / Ambulance)", "number": "112",
      "detail": "European emergency number — free from any phone.", "color": "#C0392B"},
-    {"icon": "👮", "name": "Police Emergency", "number": "110",
+    {"icon": _POLICE, "name": "Police Emergency", "number": "110",
      "detail": "German police emergency number.", "color": "#1565C0"},
-    {"icon": "🏥", "name": "Medical On-Call", "number": "116 117",
+    {"icon": "🏥",    "name": "Medical On-Call", "number": "116 117",
      "detail": "Ärztlicher Bereitschaftsdienst — non-emergency medical help.", "color": "#DC2626"},
-    {"icon": "🏛️", "name": "City Hall (Rathaus)", "number": "+49 391 540-0",
+    {"icon": _BLDG,   "name": "City Hall (Rathaus)", "number": "+49 391 540-0",
      "detail": "General enquiries · Mon–Fri 08:00–18:00", "color": "#007A6E"},
-    {"icon": "🚌", "name": "MVB Public Transport", "number": "+49 391 886-0",
+    {"icon": _BUS,    "name": "MVB Public Transport", "number": "+49 391 886-0",
      "detail": "Tram & bus info, journey planner: mvbnet.de", "color": "#6A1B9A"},
     {"icon": "💡", "name": "Stadtwerke Magdeburg", "number": "+49 391 587-0",
      "detail": "Gas, electricity, heating and water services.", "color": "#F59E0B"},
@@ -472,7 +492,7 @@ for i, c in enumerate(contacts):
             box-shadow:0 2px 10px rgba(0,0,0,0.06);margin-bottom:12px;
             border-left:4px solid {c['color']};">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-    <span style="font-size:1.4rem;">{c["icon"]}</span>
+    <span style="display:inline-flex;align-items:center;font-size:1.4rem;line-height:1;">{c["icon"]}</span>
     <span style="font-size:0.78rem;font-weight:700;color:#374151;">{c["name"]}</span>
   </div>
   <div style="font-size:1.15rem;font-weight:900;color:{c['color']};margin-bottom:4px;">{c["number"]}</div>
