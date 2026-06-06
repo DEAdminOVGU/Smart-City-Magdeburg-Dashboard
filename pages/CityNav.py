@@ -43,36 +43,28 @@ elbe_val = elbe.get("value")            if elbe    else None
 alerts = []
 
 if temp is not None and temp < 0:
-    alerts.append(("🧊 Black Ice Risk",
-                   f"Temperature is {temp:.0f}°C — black ice possible on bridges and shaded roads. "
-                   "Reduce speed and allow extra braking distance.", "warning"))
+    alerts.append((t("navi.alert.blackice.title"),
+                   t("navi.alert.blackice.msg", temp=temp), "warning"))
 elif temp is not None and temp < 3 and precip is not None and precip > 0:
-    alerts.append(("⚠️ Slippery Roads",
-                   f"Near-freezing temperatures ({temp:.0f}°C) with precipitation. "
-                   "Roads may be slippery — drive carefully.", "warning"))
+    alerts.append((t("navi.alert.slippery.title"),
+                   t("navi.alert.slippery.msg", temp=temp), "warning"))
 
 if cond and "fog" in cond.lower():
-    alerts.append(("🌫️ Reduced Visibility",
-                   "Fog reported — use low beam headlights and increase following distance. "
-                   "Check MVB for tram and bus delays.", "warning"))
+    alerts.append((t("navi.alert.fog.title"), t("navi.alert.fog.msg"), "warning"))
 
 if wind_spd is not None and wind_spd > 60:
-    alerts.append(("💨 Strong Wind",
-                   f"Wind gusts of {wind_spd:.0f} km/h. Take extra care on the Elbe bridges "
-                   "and avoid cycling on exposed routes.", "warning"))
+    alerts.append((t("navi.alert.wind.title"),
+                   t("navi.alert.wind.msg", wind=wind_spd), "warning"))
 
 if elbe_val is not None and elbe_val > 400:
-    alerts.append(("🌊 Riverside Roads Affected",
-                   f"Elbe at {elbe_val:.0f} cm — low-lying riverside roads near Strombrücke "
-                   "may be impassable. Check before travelling.", "error"))
+    alerts.append((t("navi.alert.elbe.title"),
+                   t("navi.alert.elbe.msg", elbe=elbe_val), "error"))
 
 if cond and any(k in cond.lower() for k in ["rain", "hail", "sleet"]):
-    alerts.append(("🌧️ Wet Road Conditions",
-                   "Rain or precipitation active — stopping distances are longer. "
-                   "Cyclists should use lights and avoid puddles near drains.", "info"))
+    alerts.append((t("navi.alert.rain.title"), t("navi.alert.rain.msg"), "info"))
 
 for d in fetch_service_disruptions():
-    affects_str = f" (affects: {d['affects']})" if d["affects"] else ""
+    affects_str = f" ({t('navi.affects')}: {d['affects']})" if d["affects"] else ""
     alerts.append((f"🚌 {d['head']}", f"{d['text']}{affects_str}", "warning"))
 
 if alerts:
@@ -84,15 +76,15 @@ if alerts:
         else:
             st.info(f"**{label}** — {msg}")
 else:
-    st.success("✅ **Traffic conditions normal** — no active weather or road alerts for Magdeburg.")
+    st.success(t("navi.alert.clear"))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 2: FETCH MAP DATA
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown(section_header(t("navi.sec.map"), color=NAV_ORANGE), unsafe_allow_html=True)
-st.caption(t("navi.map.cap") + " Use the layer control (top-right) to toggle layers on/off.")
+st.caption(t("navi.map.cap") + " " + t("navi.map.layer_hint"))
 
-with st.spinner("Loading map data from OpenStreetMap…"):
+with st.spinner(t("navi.spinner.map")):
     parking_pts     = fetch_parking()
     charging_pts    = fetch_charging()
     transit_pts     = fetch_transit_stops()
@@ -140,7 +132,7 @@ m = folium.Map(location=[52.131, 11.640], zoom_start=12, tiles="CartoDB positron
 
 # Layer 1: District boundaries
 if stadtteile_geojson:
-    fg_districts = folium.FeatureGroup(name="🏘️ Districts", show=True)
+    fg_districts = folium.FeatureGroup(name=t("navi.layer.districts"), show=True)
     folium.GeoJson(
         stadtteile_geojson,
         style_function=lambda f: {
@@ -149,12 +141,12 @@ if stadtteile_geojson:
             "weight": 1.5,
             "fillOpacity": 0,
         },
-        tooltip=folium.GeoJsonTooltip(fields=["name"], aliases=["District:"]),
+        tooltip=folium.GeoJsonTooltip(fields=["name"], aliases=[f"{t('common.district')}:" ]),
     ).add_to(fg_districts)
     fg_districts.add_to(m)
 
 # Layer 2: Transit stops
-fg_transit = folium.FeatureGroup(name="🚌 Transit Stops", show=False)
+fg_transit = folium.FeatureGroup(name=t("navi.layer.transit"), show=False)
 transit_cluster = MarkerCluster(
     options={"maxClusterRadius": 40, "disableClusteringAtZoom": 15}
 )
@@ -170,7 +162,7 @@ for s in transit_pts:
         fill_color=color,
         fill_opacity=0.8,
         popup=folium.Popup(
-            f"<b>{icon_char} {s['name']}{ref_str}</b><br>Type: {s['type'].title()} stop",
+            f"<b>{icon_char} {s['name']}{ref_str}</b><br>{t('navi.popup.type')}: {s['type'].title()} {t('common.stop')}",
             max_width=200,
         ),
         tooltip=s["name"],
@@ -179,13 +171,13 @@ transit_cluster.add_to(fg_transit)
 fg_transit.add_to(m)
 
 # Layer 3: Parking
-fg_parking = folium.FeatureGroup(name="🅿️ Parking", show=False)
+fg_parking = folium.FeatureGroup(name=t("navi.layer.parking"), show=False)
 parking_cluster = MarkerCluster(
     options={"maxClusterRadius": 50, "disableClusteringAtZoom": 15}
 )
 for p in parking_pts:
-    cap_str = f"<br>Capacity: {p['capacity']}" if p.get("capacity") else ""
-    typ_str = f"<br>Type: {p['type'].replace('_',' ').title()}" if p.get("type") else ""
+    cap_str = f"<br>{t('navi.popup.capacity')}: {p['capacity']}" if p.get("capacity") else ""
+    typ_str = f"<br>{t('navi.popup.type')}: {p['type'].replace('_',' ').title()}" if p.get("type") else ""
     folium.CircleMarker(
         location=[p["lat"], p["lon"]],
         radius=6,
@@ -203,11 +195,11 @@ parking_cluster.add_to(fg_parking)
 fg_parking.add_to(m)
 
 # Layer 4: EV Charging
-fg_charging = folium.FeatureGroup(name="⚡ EV Charging", show=False)
+fg_charging = folium.FeatureGroup(name=t("navi.layer.charging"), show=False)
 for c in charging_pts:
-    op_str  = f"<br>Operator: {c['operator']}" if c.get("operator") else ""
-    soc_str = f"<br>Sockets: {c['sockets']}"   if c.get("sockets")  else ""
-    fee_str = f"<br>Fee: {c['fee']}"            if c.get("fee")      else ""
+    op_str  = f"<br>{t('navi.popup.operator')}: {c['operator']}" if c.get("operator") else ""
+    soc_str = f"<br>{t('navi.popup.sockets')}: {c['sockets']}"   if c.get("sockets")  else ""
+    fee_str = f"<br>{t('navi.popup.fee')}: {c['fee']}"            if c.get("fee")      else ""
     folium.Marker(
         location=[c["lat"], c["lon"]],
         popup=folium.Popup(
@@ -229,10 +221,10 @@ for c in charging_pts:
 fg_charging.add_to(m)
 
 # Layer 5: Restaurants & Cafés
-fg_food = folium.FeatureGroup(name="🍽️ Restaurants & Cafés", show=False)
+fg_food = folium.FeatureGroup(name=t("navi.layer.food"), show=False)
 food_cluster = MarkerCluster(options={"maxClusterRadius": 45, "disableClusteringAtZoom": 15})
 for r in restaurant_pts:
-    cuisine_str = f"<br>Cuisine: {r['cuisine']}" if r.get("cuisine") else ""
+    cuisine_str = f"<br>{t('navi.popup.cuisine')}: {r['cuisine']}" if r.get("cuisine") else ""
     folium.CircleMarker(
         location=[r["lat"], r["lon"]],
         radius=5,
@@ -251,19 +243,19 @@ fg_food.add_to(m)
 
 # Layer 6: Accident hotspots (clustered red markers)
 if accident_pts:
-    fg_accidents = folium.FeatureGroup(name="🚨 Accident Hotspots", show=False)
+    fg_accidents = folium.FeatureGroup(name=t("navi.layer.accidents"), show=False)
     acc_cluster = MarkerCluster(
         options={"maxClusterRadius": 35, "disableClusteringAtZoom": 15}
     )
-    cat_label = {1: "Fatal", 2: "Serious injury", 3: "Minor injury"}
+    cat_label = {1: t("navi.acc.fatal"), 2: t("navi.acc.serious"), 3: t("navi.acc.minor")}
     for a in accident_pts:
-        cat = cat_label.get(a["category"], "Accident")
+        cat = cat_label.get(a["category"], t("navi.acc.generic"))
         involved = []
-        if a["rad"]:  involved.append("cyclist")
-        if a["pkw"]:  involved.append("car")
-        if a["fuss"]: involved.append("pedestrian")
-        if a["krad"]: involved.append("motorcycle")
-        inv_str = ", ".join(involved) if involved else "vehicle"
+        if a["rad"]:  involved.append(t("navi.vehicle.cyclist"))
+        if a["pkw"]:  involved.append(t("navi.vehicle.car"))
+        if a["fuss"]: involved.append(t("navi.vehicle.pedestrian"))
+        if a["krad"]: involved.append(t("navi.vehicle.motorcycle"))
+        inv_str = ", ".join(involved) if involved else t("navi.vehicle.vehicle")
         folium.CircleMarker(
             location=[a["lat"], a["lon"]],
             radius=4,
@@ -272,16 +264,16 @@ if accident_pts:
             fill_color="#C0392B",
             fill_opacity=0.75,
             popup=folium.Popup(
-                f"<b>🚨 {cat}</b><br>Year: {a['year']}<br>Involved: {inv_str}",
+                f"<b>🚨 {cat}</b><br>{t('navi.popup.year')}: {a['year']}<br>{t('navi.popup.involved')}: {inv_str}",
                 max_width=200,
             ),
-            tooltip=f"Accident {a['year']} — {cat}",
+            tooltip=f"{t('navi.acc.generic')} {a['year']} — {cat}",
         ).add_to(acc_cluster)
     acc_cluster.add_to(fg_accidents)
     fg_accidents.add_to(m)
 
     # Layer 6: Accident heatmap
-    fg_heatmap = folium.FeatureGroup(name="🔥 Accident Heatmap", show=False)
+    fg_heatmap = folium.FeatureGroup(name=t("navi.layer.heatmap"), show=False)
     heat_data = [[a["lat"], a["lon"]] for a in accident_pts]
     HeatMap(
         heat_data,
@@ -325,7 +317,7 @@ with stat_cols[2]:
     st.markdown(live_card(
         "🚌", t("navi.card.transit"),
         str(len(transit_pts)) if transit_pts else "—",
-        f"{bus_count} bus · {tram_count} tram",
+        t("navi.card.transit.sub", bus=bus_count, tram=tram_count),
         status_color="#009E3D",
     ), unsafe_allow_html=True)
 
@@ -336,17 +328,17 @@ with stat_cols[3]:
         st.markdown(live_card(
             "🚨", t("navi.card.accidents"),
             f"{yr_count:,}".replace(",", "."),
-            f"Traffic incidents in {max_year}",
+            t("navi.card.accidents.sub", year=max_year),
             status_color="#C0392B",
         ), unsafe_allow_html=True)
     else:
         st.markdown(live_card(
             "🚨", t("navi.card.accidents"), "—",
-            "Unfallatlas data unavailable",
+            t("navi.card.accidents.none"),
             status_color="#C0392B",
         ), unsafe_allow_html=True)
 
-st.caption("Sources: OpenStreetMap / Overpass API (parking, charging, transit) · Unfallatlas (accidents)")
+st.caption(t("navi.source.infra"))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 4: LIVE DEPARTURES
@@ -358,19 +350,19 @@ if mvb_stops:
     sel_col, hint_col = st.columns([4, 1])
     with sel_col:
         sel_idx = st.selectbox(
-            "stop",
+            t("common.stop"),
             options=range(len(mvb_stops)),
             format_func=lambda i: mvb_stops[i]["name"],
             index=None,
-            placeholder="Choose a stop…",
+            placeholder=t("common.choose_stop"),
             label_visibility="collapsed",
         )
     with hint_col:
-        st.caption("🔄 updates every 60 s")
+        st.caption(t("navi.depart.update"))
 
     if sel_idx is not None:
         selected_stop = mvb_stops[sel_idx]
-        with st.spinner(f"Fetching departures from {selected_stop['name']}…"):
+        with st.spinner(t("navi.depart.spinner", stop=selected_stop["name"])):
             deps = fetch_departures(selected_stop["ext_id"])
 
         if deps:
@@ -381,12 +373,12 @@ if mvb_stops:
                 if cancelled:
                     row_bg    = "background:#FFF1F2;"
                     name_sty  = "text-decoration:line-through;color:#999;"
-                    delay_html = '<span style="color:#C0392B;font-weight:700;">Cancelled</span>'
+                    delay_html = f'<span style="color:#C0392B;font-weight:700;">{t("navi.depart.cancelled")}</span>'
                 else:
                     row_bg   = ""
                     name_sty = ""
                     if delay_min is None or delay_min <= 0:
-                        delay_html = '<span style="color:#2E7D32;font-weight:700;">On time</span>'
+                        delay_html = f'<span style="color:#2E7D32;font-weight:700;">{t("navi.depart.ontime")}</span>'
                     elif delay_min <= 5:
                         delay_html = f'<span style="color:#E8650B;font-weight:700;">+{delay_min} min</span>'
                     else:
@@ -411,17 +403,17 @@ if mvb_stops:
     <thead>
       <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
         <th style="padding:10px 12px;text-align:left;font-size:0.68rem;text-transform:uppercase;
-                   letter-spacing:0.1em;color:#64748b;font-weight:800;">Line</th>
+                   letter-spacing:0.1em;color:#64748b;font-weight:800;">{t("navi.depart.line")}</th>
         <th style="padding:10px 12px;text-align:left;font-size:0.68rem;text-transform:uppercase;
-                   letter-spacing:0.1em;color:#64748b;font-weight:800;">Direction</th>
+                   letter-spacing:0.1em;color:#64748b;font-weight:800;">{t("navi.depart.direction")}</th>
         <th style="padding:10px 12px;text-align:left;font-size:0.68rem;text-transform:uppercase;
-                   letter-spacing:0.1em;color:#64748b;font-weight:800;">Scheduled</th>
+                   letter-spacing:0.1em;color:#64748b;font-weight:800;">{t("navi.depart.scheduled")}</th>
         <th style="padding:10px 12px;text-align:left;font-size:0.68rem;text-transform:uppercase;
-                   letter-spacing:0.1em;color:#64748b;font-weight:800;">Real-time</th>
+                   letter-spacing:0.1em;color:#64748b;font-weight:800;">{t("navi.depart.realtime")}</th>
         <th style="padding:10px 12px;text-align:left;font-size:0.68rem;text-transform:uppercase;
-                   letter-spacing:0.1em;color:#64748b;font-weight:800;">Delay</th>
+                   letter-spacing:0.1em;color:#64748b;font-weight:800;">{t("navi.depart.delay")}</th>
         <th style="padding:10px 12px;text-align:center;font-size:0.68rem;text-transform:uppercase;
-                   letter-spacing:0.1em;color:#64748b;font-weight:800;">Track</th>
+                   letter-spacing:0.1em;color:#64748b;font-weight:800;">{t("navi.depart.track")}</th>
       </tr>
     </thead>
     <tbody>{rows_html}</tbody>
@@ -429,19 +421,15 @@ if mvb_stops:
 </div>
 """, unsafe_allow_html=True)
             st.caption(
-                f"Departures from {selected_stop['name']} · "
-                "Real-time data via NASA HAFAS REST API · refreshes every 60 s"
+                t("navi.depart.caption", stop=selected_stop["name"])
             )
         else:
-            st.info(
-                "No departure data available for this stop. "
-                "The stop may not have live departures or the HAFAS service is currently unavailable."
-            )
+            st.info(t("navi.depart.none"))
     else:
         st.markdown(
             '<div style="color:#94a3b8;font-size:0.88rem;padding:12px 0;">'
-            'Select a stop above to view live departures.</div>',
+            f'{t("navi.depart.prompt")}</div>',
             unsafe_allow_html=True,
         )
 else:
-    st.info("Stop list unavailable — could not load MVB GTFS data.")
+    st.info(t("navi.depart.stops_none"))

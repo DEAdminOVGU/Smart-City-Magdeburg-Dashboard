@@ -118,14 +118,12 @@ st.markdown(f"""
 alerts = []
 
 if pm25 is not None and pm25 > 35:
-    alerts.append(("😷 Air Quality Warning",
-                   f"PM2.5 is **{pm25:.1f} µg/m³** — above the WHO guideline of 35 µg/m³. "
-                   "Sensitive groups should limit outdoor activity.", "warning"))
+    alerts.append((f"😷 {t('home.alert.air.title')}",
+                   t("home.alert.air.msg", pm25=pm25), "warning"))
 
 if wind_spd is not None and wind_spd > 60:
-    alerts.append(("💨 Strong Wind Alert",
-                   f"Wind speeds of **{wind_spd:.0f} km/h** recorded. "
-                   "Cyclists and pedestrians should take care on exposed routes.", "warning"))
+    alerts.append((f"💨 {t('home.alert.wind.title')}",
+                   t("home.alert.wind.msg", wind=wind_spd), "warning"))
 
 if alerts:
     for level_label, msg, alert_type in alerts:
@@ -149,7 +147,7 @@ else:
             display:flex;align-items:center;gap:14px;">
   <div style="flex-shrink:0;">{ALERT_ICON}</div>
   <div style="font-size:0.82rem;font-weight:800;color:#15803D;">
-    All Clear — No active alerts for Magdeburg right now. Conditions are normal.
+    {t("home.alert.clear")}
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -172,7 +170,7 @@ with weather_col:
 <div style="background:linear-gradient(135deg,#0f4c75 0%,#1b6ca8 60%,#1e8bc3 100%);
             border-radius:20px;padding:28px 32px;color:#fff;">
   <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
-              letter-spacing:0.14em;opacity:0.7;margin-bottom:6px;">Magdeburg, today</div>
+              letter-spacing:0.14em;opacity:0.7;margin-bottom:6px;">{t("home.weather.today")}</div>
   <div style="display:flex;align-items:center;gap:16px;">
     <div style="font-size:4rem;line-height:1;">{icon_main}</div>
     <div>
@@ -181,8 +179,8 @@ with weather_col:
     </div>
   </div>
   <div style="display:flex;gap:28px;margin-top:20px;font-size:0.88rem;opacity:0.85;">
-    <span>💨 Wind &nbsp;<strong>{wind_str}</strong></span>
-    <span>💧 Humidity &nbsp;<strong>{hum_str}</strong></span>
+    <span>💨 {t("home.weather.wind")} &nbsp;<strong>{wind_str}</strong></span>
+    <span>💧 {t("home.weather.humidity")} &nbsp;<strong>{hum_str}</strong></span>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -206,7 +204,7 @@ with weather_col:
 </div>
 """, unsafe_allow_html=True)
 
-    st.caption("Source: Bright Sky / DWD · Updated every 10 min")
+    st.caption(t("home.weather.source"))
 
 with pulse_col:
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
@@ -215,10 +213,10 @@ with pulse_col:
                 else "#F59E0B" if uv_index <= 5
                 else "#E65100" if uv_index <= 7
                 else "#C0392B")
-    uv_risk  = ("Low" if uv_index is None or uv_index <= 2
-                else "Moderate" if uv_index <= 5
-                else "High" if uv_index <= 7
-                else "Very High")
+    uv_risk  = (t("risk.low") if uv_index is None or uv_index <= 2
+                else t("risk.moderate") if uv_index <= 5
+                else t("risk.high") if uv_index <= 7
+                else t("risk.very_high"))
     _uv_val  = f"{uv_index:.1f}" if uv_index is not None else "—"
     st.markdown(f"""
 <div style="background:#fff;border-radius:12px;padding:18px 16px;
@@ -276,7 +274,7 @@ with pulse_col:
 </div>
 """, unsafe_allow_html=True)
 
-    st.caption("Sources: Bright Sky / DWD · Sensor.Community")
+    st.caption(t("home.source.pulse"))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 4: TODAY'S TIPS
@@ -285,31 +283,31 @@ st.markdown(section_header(t("home.sec.reco")), unsafe_allow_html=True)
 
 tips = []
 if cond and any(k in cond.lower() for k in ["rain", "sleet", "hail"]):
-    tips.append("🌧️ Rain expected — take an umbrella or use the MVB tram/bus network to stay dry.")
+    tips.append(t("home.tip.rain"))
 elif cond and "snow" in cond.lower():
-    tips.append("❄️ Snowy conditions — allow extra travel time and check MVB for service disruptions.")
+    tips.append(t("home.tip.snow"))
 elif cond and "fog" in cond.lower():
-    tips.append("🌫️ Foggy morning — drive with low beam headlights and reduce speed on the Elbe bridge.")
+    tips.append(t("home.tip.fog"))
 elif temp is not None and temp > 25:
-    tips.append("☀️ Warm day ahead — the Elbauenpark and Biederitzer Busch are perfect for a walk or picnic.")
+    tips.append(t("home.tip.warm"))
 elif temp is not None and temp < 0:
-    tips.append("🧥 Freezing temperatures — dress in layers and check gritting status before cycling.")
+    tips.append(t("home.tip.freeze"))
 else:
-    tips.append("🌤️ Good conditions — explore the Altstadt or cycle along the Elbe cycle path.")
+    tips.append(t("home.tip.good"))
 
 if pm25 is not None and pm25 > 25:
-    tips.append("😷 Air quality is moderate — people with respiratory conditions should limit strenuous outdoor exercise.")
+    tips.append(t("home.tip.air.moderate"))
 else:
-    tips.append("🌿 Air quality is good today — a great day to open windows or exercise outdoors in the parks.")
+    tips.append(t("home.tip.air.good"))
 
-tips.append("📅 Check the events calendar below for upcoming activities in Magdeburg this month.")
+tips.append(t("home.tip.events"))
 
 tips_html = "".join(f'<li style="margin-bottom:8px;">{t}</li>' for t in tips)
 st.markdown(f"""
 <div style="background:#fffbeb;border-left:4px solid #F59E0B;border-radius:0 14px 14px 0;
             padding:18px 24px;margin-bottom:8px;">
   <div style="font-size:0.72rem;font-weight:800;color:#92400E;text-transform:uppercase;
-              letter-spacing:0.12em;margin-bottom:10px;">💡 City Tips for Today</div>
+              letter-spacing:0.12em;margin-bottom:10px;">{t("home.tip.header")}</div>
   <ul style="margin:0;padding-left:18px;font-size:0.9rem;color:#374151;line-height:1.6;">
     {tips_html}
   </ul>
@@ -347,7 +345,7 @@ if news_items:
   {date_html}
 </div>
 """, unsafe_allow_html=True)
-    st.caption("Source: Landeshauptstadt Magdeburg — City Press Office RSS feed")
+    st.caption(t("home.news.source"))
 
 else:
     st.info(t("home.news.offline"))
@@ -469,13 +467,13 @@ for i, c in enumerate(_CONTACTS):
 st.markdown(section_header(t("home.sec.explore")), unsafe_allow_html=True)
 
 landmarks = [
-    (52.1316, 11.6397, "Dom", "🏛️ Magdeburg Cathedral — 13th century Gothic landmark."),
-    (52.1275, 11.6361, "Rathaus", "🏛️ City Hall — administrative centre of Magdeburg."),
-    (52.1229, 11.6457, "Hundertwasserhaus", "🏠 Colourful apartment building by Friedensreich Hundertwasser."),
-    (52.1361, 11.6272, "Elbauenpark", "🎡 Large riverside park — Stadtfest and outdoor events."),
-    (52.1302, 11.6267, "Magdeburg Hbf", "🚂 Main train station — regional and ICE connections."),
-    (52.1393, 11.6470, "OVGU Campus", "🎓 Otto-von-Guericke-Universität — largest university."),
-    (52.1219, 11.6306, "Elbe Promenade", "🌊 Scenic riverside walk along the Elbe."),
+    (52.1316, 11.6397, "Dom", t("home.landmark.dom")),
+    (52.1275, 11.6361, "Rathaus", t("home.landmark.rathaus")),
+    (52.1229, 11.6457, "Hundertwasserhaus", t("home.landmark.hundert")),
+    (52.1361, 11.6272, "Elbauenpark", t("home.landmark.elbauen")),
+    (52.1302, 11.6267, "Magdeburg Hbf", t("home.landmark.hbf")),
+    (52.1393, 11.6470, "OVGU Campus", t("home.landmark.ovgu")),
+    (52.1219, 11.6306, "Elbe Promenade", t("home.landmark.elbe")),
 ]
 
 m = folium.Map(location=[52.131, 11.640], zoom_start=13, tiles="CartoDB positron")
@@ -489,14 +487,13 @@ for lat, lon, name, tooltip in landmarks:
 
 map_html = m._repr_html_()
 components.html(map_html, height=440, scrolling=False)
-st.caption("Source: OpenStreetMap / CartoDB · Click markers for details")
+st.caption(t("home.map.source"))
 
 
 st.markdown(
     "<div style='height:20px'></div>"
     "<div style='font-size:0.72rem;color:#94a3b8;text-align:center;padding-bottom:16px;'>"
-    "Smart City Magdeburg Dashboard · Data sources: KISS-MD, Bright Sky/DWD, "
-    "Sensor.Community, OpenStreetMap"
+    f"{t('home.footer')}"
     "</div>",
     unsafe_allow_html=True,
 )

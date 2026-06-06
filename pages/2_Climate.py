@@ -44,7 +44,7 @@ st.markdown(
     f"</p>",
     unsafe_allow_html=True,
 )
-st.caption("Sources: DWD Climate Data Center (station 03126) · KISS-MD / Landeshauptstadt Magdeburg · Bright Sky / Sensor.Community")
+st.caption(t("cli.source.header"))
 
 # ── Load static data ──────────────────────────────────────────────────────────
 df_monthly = load_klima_monat()
@@ -76,8 +76,8 @@ try:
         st.markdown(hero_stat(
             "🌡️",
             f"{'+' if _la>=0 else ''}{_la:.1f} °C",
-            f"Annual temperature anomaly vs 1961–1990 baseline · {_yr}",
-            f"{'+' if _diff>=0 else ''}{_diff:.1f} °C vs {_yr-1}",
+            t("cli.hero.desc", year=_yr),
+            t("cli.hero.delta", delta=_diff, year=_yr-1),
             delta_positive=False,
             color="#00897B",
         ), unsafe_allow_html=True)
@@ -96,8 +96,8 @@ except Exception:
         st.markdown(hero_stat(
             "🌡️",
             f"{'+' if _la>=0 else ''}{_la:.1f} °C",
-            f"Annual temperature anomaly vs 1961–1990 baseline ({_baseline:.1f} °C) · {_yr}",
-            f"{'+' if _diff>=0 else ''}{_diff:.1f} °C vs {_yr-1}",
+            t("cli.hero.desc.base", baseline=_baseline, year=_yr),
+            t("cli.hero.delta", delta=_diff, year=_yr-1),
             delta_positive=False,
             color="#00897B",
         ), unsafe_allow_html=True)
@@ -153,13 +153,13 @@ with live_cols[3]:
         status_color=pm_color,
     ), unsafe_allow_html=True)
 
-st.caption("Live data: Bright Sky / DWD (weather) · Sensor.Community (PM2.5) — refreshes every 10 min")
+st.caption(t("cli.live.source"))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 2: WEATHER FORECAST
 # ─────────────────────────────────────────────────────────────────────────────
 if forecast:
-    st.markdown(section_header("3-Day Weather Forecast", color=MD_TEAL), unsafe_allow_html=True)
+    st.markdown(section_header(t("cli.sec.forecast"), color=MD_TEAL), unsafe_allow_html=True)
     fc_cols = st.columns(min(len(forecast), 4))
     for i, fc in enumerate(forecast[:4]):
         with fc_cols[i]:
@@ -179,12 +179,12 @@ if forecast:
   <div style="font-size:0.82rem;color:#94a3b8;">{lo}</div>
 </div>
 """, unsafe_allow_html=True)
-    st.caption("Source: Bright Sky / DWD · Updated every 30 min")
+    st.caption(t("cli.forecast.source"))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 3: RECENT 14-DAY WEATHER
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Last 14 Days — Temperature & Precipitation", color=MD_TEAL), unsafe_allow_html=True)
+st.markdown(section_header(t("cli.sec.14day"), color=MD_TEAL), unsafe_allow_html=True)
 
 try:
     # Try live BrightSky data first; fall back to static DWD file
@@ -200,7 +200,7 @@ try:
     week_l, week_r = st.columns(2)
 
     with week_l:
-        st.caption("Daily temperature range (°C) — last 14 days")
+        st.caption(t("cli.cap.recent.temp"))
         fig_temp = go.Figure()
         # Filled band: min to max
         fig_temp.add_trace(go.Scatter(
@@ -209,7 +209,7 @@ try:
             fill="toself",
             fillcolor=MD_TEAL + "30",
             line=dict(color="rgba(0,0,0,0)"),
-            name="Temp range",
+            name=t("cli.live.temp"),
             showlegend=True,
             hoverinfo="skip",
         ))
@@ -217,14 +217,14 @@ try:
         fig_temp.add_trace(go.Scatter(
             x=df_d["date"], y=df_d["TMK"],
             mode="lines+markers",
-            name="Mean °C",
+            name=t("common.long_mean"),
             line=dict(color=MD_TEAL, width=2),
             marker=dict(size=5),
             hovertemplate="%{x|%d %b}: %{y:.1f} °C<extra>Mean</extra>",
         ))
         fig_temp.update_layout(
             template=PLOTLY_TEMPLATE,
-            yaxis_title="Temperature (°C)",
+            yaxis_title=t("cli.live.temp") + " (°C)",
             xaxis_tickformat="%d %b",
             legend=dict(orientation="h", y=-0.2),
             margin=dict(l=50, r=10, t=20, b=60),
@@ -233,31 +233,31 @@ try:
         st.plotly_chart(fig_temp, use_container_width=True)
 
     with week_r:
-        st.caption("Daily precipitation (mm) — last 14 days")
+        st.caption(t("cli.cap.recent.prec"))
         df_d_prec = df_d[df_d["RSK"].notna()]
         fig_prec = go.Figure(go.Bar(
             x=df_d_prec["date"], y=df_d_prec["RSK"],
             marker_color=MD_BLUE,
             hovertemplate="%{x|%d %b}: %{y:.1f} mm<extra></extra>",
-            name="Precipitation",
+            name=t("cli.sec.prec"),
         ))
         fig_prec.update_layout(
             template=PLOTLY_TEMPLATE,
-            yaxis_title="Precipitation (mm)",
+            yaxis_title=t("cli.sec.prec").replace(" (Heatmap)", "") + " (mm)",
             xaxis_tickformat="%d %b",
             margin=dict(l=50, r=10, t=20, b=60),
             height=280,
         )
         st.plotly_chart(fig_prec, use_container_width=True)
 
-    st.caption("Source: DWD Climate Data Center (station 03126 Magdeburg)")
+    st.caption(t("cli.source.dwd"))
 except Exception as e:
-    st.info(f"Recent daily weather data unavailable: {e}")
+    st.info(t("cli.err.recent", error=e))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 4: MONTHLY CLIMATE PROFILE
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Monthly Climate Profile — This Year vs Long-term Mean", color=MD_TEAL), unsafe_allow_html=True)
+st.markdown(section_header(t("cli.sec.monthly"), color=MD_TEAL), unsafe_allow_html=True)
 
 try:
     df_kiss_m = load_kiss("wetter/witterungsverhaeltnisse-monatlich.json")
@@ -289,7 +289,7 @@ try:
         prof_l, prof_r = st.columns(2)
 
         with prof_l:
-            st.caption(f"Monthly mean temperature · {latest_yr} vs long-term mean (1990–)")
+            st.caption(t("cli.cap.month.temp", year=latest_yr))
             fig_mptemp = go.Figure()
             fig_mptemp.add_trace(go.Bar(
                 x=[month_abbr[int(r["Monat"])-1] for _, r in df_this.iterrows()],
@@ -303,7 +303,7 @@ try:
                 x=[month_abbr[int(r["Monat"])-1] for _, r in df_lt.iterrows()],
                 y=df_lt["LT_mean"].tolist(),
                 mode="lines+markers",
-                name="Long-term mean",
+                name=t("common.long_mean"),
                 line=dict(color="#64748b", width=2, dash="dot"),
                 hovertemplate="%{x}: %{y:.1f} °C long-term<extra></extra>",
             ))
@@ -327,7 +327,7 @@ try:
                     .reset_index()
                     .rename(columns={prec_col: "LT_prec"})
                 )
-                st.caption(f"Monthly precipitation · {latest_yr} vs long-term mean (1990–)")
+                st.caption(t("cli.cap.month.prec", year=latest_yr))
                 fig_mpprec = go.Figure()
                 fig_mpprec.add_trace(go.Bar(
                     x=[month_abbr[int(r["Monat"])-1] for _, r in df_this_p.iterrows()],
@@ -341,39 +341,38 @@ try:
                     x=[month_abbr[int(r["Monat"])-1] for _, r in df_lt_p.iterrows()],
                     y=df_lt_p["LT_prec"].tolist(),
                     mode="lines+markers",
-                    name="Long-term mean",
+                    name=t("common.long_mean"),
                     line=dict(color="#64748b", width=2, dash="dot"),
                     hovertemplate="%{x}: %{y:.0f} mm long-term<extra></extra>",
                 ))
                 fig_mpprec.update_layout(
                     template=PLOTLY_TEMPLATE,
-                    yaxis_title="Precipitation (mm)",
+                    yaxis_title=t("cli.sec.prec").replace(" (Heatmap)", "") + " (mm)",
                     legend=dict(orientation="h", y=-0.25),
                     margin=dict(l=40, r=10, t=20, b=60),
                     height=300,
                 )
                 st.plotly_chart(fig_mpprec, use_container_width=True)
             else:
-                st.info("Precipitation column not found in monthly KISS data.")
+                st.info(t("cli.month.info.no_prec"))
 
         st.markdown(insight_box(
-            f"In {latest_yr}, Magdeburg's summer months continued the warming trend seen across Central Europe. "
-            "Compare bars vs the dashed long-term mean — months above the line were warmer / wetter than average."
+            t("cli.insight.monthly", year=latest_yr)
         ), unsafe_allow_html=True)
-        st.caption("Source: KISS-MD / Statistisches Amt Magdeburg · Monthly weather observations")
+        st.caption(t("cli.source.monthly"))
     else:
-        st.info("Monthly climate profile data unavailable.")
+        st.info(t("cli.month.info.none"))
 except Exception as e:
-    st.info(f"Monthly climate profile unavailable: {e}")
+    st.info(t("cli.month.info.error", error=e))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 5: LONG-TERM TEMPERATURE ANOMALY (existing)
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Long-term Temperature Anomaly (1834–present)", color=MD_TEAL), unsafe_allow_html=True)
-st.caption("Annual deviation from 1961–1990 WMO baseline · 10-year rolling average")
+st.markdown(section_header(t("cli.sec.anomaly"), color=MD_TEAL), unsafe_allow_html=True)
+st.caption(t("cli.cap.anomaly"))
 
 year_min, year_max = st.slider(
-    "Year range", int(df_monthly["year"].min()), int(df_monthly["year"].max()),
+    t("common.year_range"), int(df_monthly["year"].min()), int(df_monthly["year"].max()),
     value=(1950, int(df_monthly["year"].max())), key="temp_years",
 )
 
@@ -393,34 +392,32 @@ fig_anom = go.Figure()
 colours = [MD_RED if v >= 0 else MD_BLUE for v in df_plot["anomaly"]]
 fig_anom.add_trace(go.Bar(
     x=df_plot["year"], y=df_plot["anomaly"],
-    marker_color=colours, name="Annual anomaly",
+    marker_color=colours, name=t("cli.trace.anomaly"),
     hovertemplate="%{x}: %{y:+.2f} °C<extra></extra>",
 ))
 fig_anom.add_trace(go.Scatter(
     x=df_plot["year"], y=df_plot["rolling10"],
-    mode="lines", name="10-year rolling mean",
+    mode="lines", name=t("cli.trace.rolling"),
     line=dict(color="black", width=2, dash="dot"),
 ))
 fig_anom.add_hline(y=0, line_color="grey", line_width=1)
 fig_anom.update_layout(
     template=PLOTLY_TEMPLATE,
-    yaxis_title="Temperature anomaly (°C)",
-    xaxis_title="Year",
+    yaxis_title=t("cli.axis.temp_anomaly"),
+    xaxis_title=t("common.year"),
     legend=dict(orientation="h", y=-0.15),
     margin=dict(l=40, r=20, t=30, b=60),
 )
 st.plotly_chart(fig_anom, use_container_width=True)
 st.markdown(insight_box(
-    f"The 10-year rolling average has been steadily rising since the 1980s — "
-    f"Magdeburg's annual mean is now consistently above the 1961–1990 baseline of {baseline:.1f} °C. "
-    "Red bars dominate after 2000, reflecting accelerating warming in Central Europe."
+    t("cli.insight.anomaly", baseline=baseline)
 ), unsafe_allow_html=True)
-st.caption(f"Baseline (1961–1990): {baseline:.2f} °C · DWD station 03126 · Data from 1834")
+st.caption(t("cli.cap.baseline", baseline=baseline))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 5b: HISTORICAL ANNUAL MEANS — TEMPERATURE & PRESSURE
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Historical Annual Means — Temperature & Pressure", color=MD_TEAL), unsafe_allow_html=True)
+st.markdown(section_header(t("cli.sec.histmean"), color=MD_TEAL), unsafe_allow_html=True)
 
 hist_l, hist_r = st.columns(2)
 
@@ -433,7 +430,7 @@ with hist_l:
             .rename(columns={"MO_TT": "ann_temp"})
             .sort_values("year")
         )
-        st.caption("Annual mean temperature (°C) — DWD station 03126")
+        st.caption(t("cli.cap.annual_temp"))
         fig_ann_t = go.Figure(go.Scatter(
             x=df_ann_temp["year"], y=df_ann_temp["ann_temp"],
             mode="lines+markers",
@@ -449,7 +446,7 @@ with hist_l:
         )
         st.plotly_chart(fig_ann_t, use_container_width=True)
     except Exception:
-        st.info("Annual temperature data unavailable.")
+        st.info(t("cli.info.annual_temp"))
 
 with hist_r:
     try:
@@ -462,7 +459,7 @@ with hist_r:
                 .rename(columns={_pp_col: "ann_pressure"})
                 .sort_values("year")
             )
-            st.caption("Annual mean air pressure (hPa) — DWD station 03126")
+            st.caption(t("cli.cap.annual_pressure"))
             fig_ann_p = go.Figure(go.Scatter(
                 x=df_ann_p["year"], y=df_ann_p["ann_pressure"],
                 mode="lines+markers",
@@ -478,21 +475,21 @@ with hist_r:
             )
             st.plotly_chart(fig_ann_p, use_container_width=True)
         else:
-            st.info("Pressure data not available in DWD dataset.")
+            st.info(t("cli.info.pressure_col"))
     except Exception:
-        st.info("Annual pressure data unavailable.")
+        st.info(t("cli.info.pressure"))
 
-st.caption("Source: DWD station 03126 Magdeburg · Monthly climate data aggregated to annual means")
+st.caption(t("cli.source.annual"))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 6: PRECIPITATION HEATMAP (existing)
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Monthly Precipitation Heatmap", color=MD_TEAL), unsafe_allow_html=True)
-st.caption("Monthly precipitation totals (mm) — white = dry, blue = wet")
+st.markdown(section_header(t("cli.sec.prec"), color=MD_TEAL), unsafe_allow_html=True)
+st.caption(t("cli.cap.prec"))
 
-n_years = st.selectbox("Show last N years", [20, 30, 50, "All"], index=0, key="prec_nyears")
+n_years = st.selectbox(t("common.show_last_n"), [20, 30, 50, t("common.all")], index=0, key="prec_nyears")
 df_prec = df_monthly[df_monthly["MO_RR"].notna()].copy()
-if n_years != "All":
+if n_years != t("common.all"):
     max_year = int(df_prec["year"].max())
     df_prec  = df_prec[df_prec["year"] >= max_year - int(n_years) + 1]
 
@@ -500,20 +497,18 @@ df_prec["month_name"] = df_prec["month"].map({v: k for k, v in MONTHS_DE.items()
 pivot = df_prec.pivot_table(index="year", columns="month_name", values="MO_RR", aggfunc="mean")
 pivot = pivot.reindex(columns=[m for m in MONTHS_DE_ORDER if m in pivot.columns])
 
-fig_heat = heatmap(pivot, title="Monthly Precipitation (mm)", colorscale="Blues", zmin=0,
-                   x_label="Month", y_label="Year")
+fig_heat = heatmap(pivot, title=t("cli.chart.prec_title"), colorscale="Blues", zmin=0,
+                   x_label=t("cli.axis.month"), y_label=t("common.year"))
 fig_heat.update_layout(margin=dict(l=50, r=20, t=50, b=40))
 st.plotly_chart(fig_heat, use_container_width=True)
 st.markdown(insight_box(
-    "Summer months (June–August) show high variability in precipitation — some years bring "
-    "intense rainfall events while others are notably dry. Winter precipitation is lower overall "
-    "but more consistent year-to-year."
+    t("cli.insight.prec")
 ), unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 7: SUNSHINE & WIND ANNUAL TRENDS
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Sunshine Duration & Wind Speed (Annual)", color=MD_TEAL), unsafe_allow_html=True)
+st.markdown(section_header(t("cli.sec.sun"), color=MD_TEAL), unsafe_allow_html=True)
 
 try:
     df_ann2 = load_kiss("wetter/witterung-in-magdeburg.json")
@@ -527,7 +522,7 @@ try:
             df_ann2[sun_col]  = pd.to_numeric(df_ann2[sun_col],  errors="coerce")
             df_sun = df_ann2[["Jahr", sun_col]].dropna().sort_values("Jahr")
             with sun_l:
-                st.caption("Annual sunshine duration (hours/year) · 2013–latest")
+                st.caption(t("cli.cap.sun"))
                 fig_sun = go.Figure(go.Bar(
                     x=df_sun["Jahr"], y=df_sun[sun_col],
                     marker_color=MD_ORANGE, opacity=0.85,
@@ -535,7 +530,7 @@ try:
                 ))
                 fig_sun.update_layout(
                     template=PLOTLY_TEMPLATE,
-                    yaxis_title="Sunshine hours / year",
+                    yaxis_title=t("cli.axis.sun"),
                     margin=dict(l=50, r=10, t=20, b=40),
                     height=280,
                 )
@@ -545,7 +540,7 @@ try:
             df_ann2[wind_col] = pd.to_numeric(df_ann2[wind_col], errors="coerce")
             df_wind = df_ann2[["Jahr", wind_col]].dropna().sort_values("Jahr")
             with sun_r:
-                st.caption("Annual mean wind speed (m/s) · 2013–latest")
+                st.caption(t("cli.cap.wind"))
                 fig_wind = go.Figure(go.Scatter(
                     x=df_wind["Jahr"], y=df_wind[wind_col],
                     mode="lines+markers",
@@ -555,23 +550,23 @@ try:
                 ))
                 fig_wind.update_layout(
                     template=PLOTLY_TEMPLATE,
-                    yaxis_title="Wind speed (m/s)",
+                    yaxis_title=t("cli.axis.wind"),
                     margin=dict(l=50, r=10, t=20, b=40),
                     height=280,
                 )
                 st.plotly_chart(fig_wind, use_container_width=True)
 
-        st.caption("Source: KISS-MD / Statistisches Amt Magdeburg · Annual weather summary")
+        st.caption(t("cli.source.sun"))
     else:
-        st.info("Sunshine/wind column names not found in annual summary data.")
+        st.info(t("cli.info.sun_cols"))
 except Exception as e:
-    st.info(f"Sunshine and wind data unavailable: {e}")
+    st.info(t("cli.info.sun_error", error=e))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 8: AIR POLLUTANTS (existing + live context)
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Air Pollutant Trends", color=MD_TEAL), unsafe_allow_html=True)
-st.caption("Source: KISS-MD / LüSA Messnetz Magdeburg · EU annual limit: NO₂ 40 µg/m³, PM₁₀ 40 µg/m³")
+st.markdown(section_header(t("cli.sec.poll"), color=MD_TEAL), unsafe_allow_html=True)
+st.caption(t("cli.cap.poll"))
 
 try:
     df_air = load_kiss("energie-und-umwelt/schadstoffkonzentration-in-der-luft.json")
@@ -590,7 +585,7 @@ try:
 
     poll_options = [c for c in ["NO₂ (µg/m³)", "O₃ (µg/m³)", "SO₂ (µg/m³)", "PM₁₀ (µg/m³)"]
                     if c in df_air.columns]
-    selected = st.multiselect("Pollutants to display", poll_options,
+    selected = st.multiselect(t("cli.poll.select"), poll_options,
                               default=["NO₂ (µg/m³)", "PM₁₀ (µg/m³)"], key="pollutants")
 
     if selected:
@@ -610,52 +605,48 @@ try:
         for col, limit in eu_limits.items():
             if col in selected:
                 fig_poll.add_hline(y=limit, line_dash="dash", line_color="grey",
-                                   annotation_text=f"EU limit {col}: {limit}",
+                                   annotation_text=t("cli.poll.limit", pollutant=col, limit=limit),
                                    annotation_position="bottom right")
 
         fig_poll.update_layout(
             template=PLOTLY_TEMPLATE,
-            yaxis_title="Concentration (µg/m³)",
-            xaxis_title="Year",
+            yaxis_title=t("cli.axis.concentration"),
+            xaxis_title=t("common.year"),
             legend=dict(orientation="h", y=-0.2),
             margin=dict(l=40, r=20, t=30, b=70),
         )
         st.plotly_chart(fig_poll, use_container_width=True)
 
         st.markdown(insight_box(
-            "NO₂ and PM₁₀ have been declining since the early 2000s — consistent with stricter "
-            "EU emission standards for vehicles and industry. Both pollutants now sit well below "
-            "the 40 µg/m³ EU annual limit. SO₂ saw the steepest drop following reunification-era "
-            "industrial restructuring."
+            t("cli.insight.poll")
         ), unsafe_allow_html=True)
     else:
-        st.info("Select at least one pollutant to display.")
+        st.info(t("cli.poll.none"))
 
     # Live PM2.5 context callout
     if pm25 is not None and "PM₁₀ (µg/m³)" in df_air.columns:
         try:
             df_pm_recent = df_air[df_air["PM₁₀ (µg/m³)"].notna()]
             latest_month_pm = float(df_pm_recent["PM₁₀ (µg/m³)"].tail(12).mean())
-            pm_status = ("below" if pm25 < latest_month_pm else "above")
+            pm_status = (t("cli.pm.below") if pm25 < latest_month_pm else t("cli.pm.above"))
             pm_color  = "#007A6E" if pm25 < 25 else ("#F59E0B" if pm25 < 35 else "#C0392B")
+            pm_advice = t("cli.pm.good") if pm25 < 25 else t("cli.pm.moderate") if pm25 < 35 else t("cli.pm.poor")
             st.markdown(f"""
 <div style="background:#f8fafc;border-left:4px solid {pm_color};border-radius:0 12px 12px 0;
             padding:12px 20px;margin:8px 0;font-size:0.88rem;color:#374151;">
-  📡 <strong>Live reading:</strong> Current PM2.5 is <strong>{pm25:.1f} µg/m³</strong> —
-  {pm_status} the recent 12-month historical PM₁₀ average of {latest_month_pm:.1f} µg/m³.
-  {"Air quality is good today." if pm25 < 25 else "Consider limiting prolonged outdoor activity." if pm25 < 35 else "Air quality is poor — sensitive groups should stay indoors."}
+  {t("cli.live_reading", pm25=pm25, status=pm_status, avg=latest_month_pm, advice=pm_advice)}
 </div>
 """, unsafe_allow_html=True)
         except Exception:
             pass
 
 except Exception as e:
-    st.warning(f"Air quality data could not be loaded: {e}")
+    st.warning(t("cli.warn.air", error=e))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 9: GLOBAL CO₂ TREND (MAUNA LOA)
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Global CO₂ Trend (Mauna Loa Observatory reference)", color=MD_TEAL), unsafe_allow_html=True)
+st.markdown(section_header(t("cli.sec.co2"), color=MD_TEAL), unsafe_allow_html=True)
 
 df_co2 = fetch_co2_trend()
 if not df_co2.empty:
@@ -678,16 +669,13 @@ if not df_co2.empty:
     fig_co2.update_layout(
         template=PLOTLY_TEMPLATE,
         yaxis_title="CO₂ (ppm)",
-        xaxis_title="Year",
+        xaxis_title=t("common.year"),
         margin=dict(l=50, r=20, t=30, b=40),
     )
     st.plotly_chart(fig_co2, use_container_width=True)
     st.markdown(insight_box(
-        f"Global atmospheric CO₂ reached {latest_co2:.1f} ppm in {latest_yr} — up from 315 ppm when "
-        "systematic measurements began at Mauna Loa in 1958. The steady rise reflects accumulated "
-        "fossil fuel emissions globally. This trend provides the planetary backdrop for local "
-        "climate action in cities like Magdeburg."
+        t("cli.insight.co2", co2=latest_co2, year=latest_yr)
     ), unsafe_allow_html=True)
-    st.caption("Source: NOAA Mauna Loa Observatory — annual mean CO₂ concentration (global reference)")
+    st.caption(t("cli.cap.co2"))
 else:
-    st.info("CO₂ trend data unavailable — check network access to NOAA servers.")
+    st.info(t("cli.info.co2"))

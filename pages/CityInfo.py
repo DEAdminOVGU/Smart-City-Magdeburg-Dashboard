@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from utils.data_loader import load_kiss
 from utils.constants import MD_TEAL, MD_ORANGE, PLOTLY_TEMPLATE
 from utils.ui_helpers import section_header, insight_box, live_card
+from utils.i18n import t
 
 CITY_PURPLE = "#6D28D9"
 
@@ -54,34 +55,33 @@ def next_first_monday() -> date:
         d = (d + timedelta(days=32)).replace(day=1)
 
 # ── Page header ───────────────────────────────────────────────────────────────
-st.title("City & Culture")
+st.title(t("cit.title"))
 st.markdown(
-    "<p style='font-size:0.97rem;color:#64748b;max-width:700px;margin:-6px 0 20px 0;'>"
-    "Everything you need as a citizen or visitor — upcoming events, city attractions, "
-    "cultural venues, and essential service contacts."
-    "</p>",
+    f"<p style='font-size:0.97rem;color:#64748b;max-width:700px;margin:-6px 0 20px 0;'>"
+    f"{t('cit.subtitle')}"
+    f"</p>",
     unsafe_allow_html=True,
 )
-st.caption("Sources: KISS-MD / Statistisches Amt Magdeburg · Landeshauptstadt Magdeburg")
+st.caption(t("cit.source.header"))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 1: EVENTS CALENDAR
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Events Calendar — Magdeburg", color=CITY_PURPLE), unsafe_allow_html=True)
+st.markdown(section_header(t("cit.sec.events"), color=CITY_PURPLE), unsafe_allow_html=True)
 
 EVENTS = [
     {"name": "Stadtfest Magdeburg",      "icon": "🎉", "month": 6,    "day": 14,
-     "desc": "City festival — music, food, and culture at the Elbe riverside."},
+     "desc": t("cit.event.stadtfest.desc")},
     {"name": "Magdeburg Marathon",        "icon": "🏃", "month": 4,    "day": 20,
-     "desc": "Annual city marathon through Magdeburg's historic districts."},
+     "desc": t("cit.event.marathon.desc")},
     {"name": "Kulturnacht",               "icon": "🎭", "month": 10,   "day": 12,
-     "desc": "One night, dozens of venues — museums, galleries, theatres open until midnight."},
+     "desc": t("cit.event.kulturnacht.desc")},
     {"name": "Altstadtfest",             "icon": "🏰", "month": 8,    "day": 23,
-     "desc": "Medieval old-town festival at the Dom and Hundertwasserhaus."},
+     "desc": t("cit.event.altstadt.desc")},
     {"name": "Weihnachtsmarkt",           "icon": "🎄", "month": 11,   "day": 24,
-     "desc": "Magdeburg Christmas market at the Cathedral square — one of Germany's oldest."},
-    {"name": "City Council Open Session", "icon": "🏛️", "month": None, "day": None,
-     "desc": "Stadtrat public meeting — citizens can attend and observe."},
+     "desc": t("cit.event.weihnacht.desc")},
+    {"name": t("cit.event.council"), "icon": "🏛️", "month": None, "day": None,
+     "desc": t("cit.event.council.desc")},
 ]
 
 upcoming = []
@@ -95,11 +95,11 @@ for i, ev in enumerate(upcoming[:4]):
     with ev_cols[i]:
         days_away = (ev["date"] - _today).days
         if days_away == 0:
-            badge, badge_color = "Today!", "#C0392B"
+            badge, badge_color = t("day.today_badge"), "#C0392B"
         elif days_away <= 7:
-            badge, badge_color = f"In {days_away} days", "#E65100"
+            badge, badge_color = t("day.in_days", days=days_away), "#E65100"
         elif days_away <= 30:
-            badge, badge_color = f"In {days_away} days", "#F59E0B"
+            badge, badge_color = t("day.in_days", days=days_away), "#F59E0B"
         else:
             badge, badge_color = ev["date"].strftime("%d %b %Y"), "#64748b"
 
@@ -116,60 +116,54 @@ for i, ev in enumerate(upcoming[:4]):
 </div>
 """, unsafe_allow_html=True)
 
-st.caption("Source: Landeshauptstadt Magdeburg — Events calendar (magdeburg.de/veranstaltungen)")
+st.caption(t("cit.events.source"))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 2: KEY ATTRACTIONS
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Key Attractions", color=CITY_PURPLE), unsafe_allow_html=True)
+st.markdown(section_header(t("cit.sec.attract"), color=CITY_PURPLE), unsafe_allow_html=True)
 
 ATTRACTIONS = [
     {
         "icon": "🕌",
         "name": "Magdeburger Dom",
-        "desc": "Germany's first Gothic cathedral (1209 AD), burial site of Emperor Otto I. "
-                "Tallest church in Saxony-Anhalt at 104 m.",
-        "badge": "History",
+        "desc": t("cit.attr.dom.desc"),
+        "badge": t("cit.badge.history"),
         "badge_color": "#7C3AED",
     },
     {
         "icon": "🟢",
         "name": "Grüne Zitadelle",
-        "desc": "Hundertwasser's final major work (2005) — a curved, golden-tipped residential "
-                "and cultural complex with rooftop gardens.",
-        "badge": "Architecture",
+        "desc": t("cit.attr.zitadelle.desc"),
+        "badge": t("cit.badge.arch"),
         "badge_color": "#059669",
     },
     {
         "icon": "🏛️",
         "name": "Kunstmuseum Kloster Unser Lieben Frauen",
-        "desc": "Magdeburg's oldest surviving building (11th century Romanesque monastery), "
-                "now a fine arts museum with sculpture and contemporary exhibitions.",
-        "badge": "Art & Museum",
+        "desc": t("cit.attr.kunst.desc"),
+        "badge": t("cit.badge.art"),
         "badge_color": "#D97706",
     },
     {
         "icon": _FACTORY,
         "name": "Technikmuseum Magdeburg",
-        "desc": "Industrial and technical heritage — steam engines, historic vehicles, "
-                "and machinery in a former factory building.",
-        "badge": "Museum",
+        "desc": t("cit.attr.tech.desc"),
+        "badge": t("cit.badge.museum"),
         "badge_color": "#64748b",
     },
     {
         "icon": "🌿",
         "name": "Gruson-Gewächshäuser",
-        "desc": "Victorian tropical greenhouse complex (1896) with palms, cacti, and "
-                "exotic plants from five climate zones. A botanical garden in the city.",
-        "badge": "Nature",
+        "desc": t("cit.attr.gruson.desc"),
+        "badge": t("cit.badge.nature"),
         "badge_color": "#16A34A",
     },
     {
         "icon": "🌊",
         "name": "Elbe Promenade & Hubbrücke",
-        "desc": "Scenic riverside walk along the Elbe with cycling paths. "
-                "The historic Hubbrücke swing bridge and Elbauenpark are nearby.",
-        "badge": "Outdoors",
+        "desc": t("cit.attr.elbe.desc"),
+        "badge": t("cit.badge.outdoors"),
         "badge_color": "#0891B2",
     },
 ]
@@ -196,17 +190,17 @@ for idx, attr in enumerate(ATTRACTIONS):
 </div>
 """, unsafe_allow_html=True)
 
-st.caption("Visitor tips: most attractions are accessible by tram from Magdeburg Hauptbahnhof · tourismusmagdeburg.de")
+st.caption(t("cit.visitor_tips"))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 3: CULTURAL VENUES — VISITOR TRENDS
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Cultural Venues — Visitor Trends", color=CITY_PURPLE), unsafe_allow_html=True)
+st.markdown(section_header(t("cit.sec.venues"), color=CITY_PURPLE), unsafe_allow_html=True)
 
 cult_l, cult_r = st.columns(2)
 
 with cult_l:
-    st.caption("City library — annual visitors")
+    st.caption(t("cit.cap.library"))
     try:
         df_lib = load_kiss("bildung-und-kultur/monatliche-besuchszahlen-bestaende-und-entleihungen.json")
         lib_col = next((c for c in df_lib.columns if "besucher" in c.lower()), None)
@@ -218,27 +212,27 @@ with cult_l:
             fig_lib = go.Figure(go.Bar(
                 x=lib_annual["Jahr"], y=lib_annual[lib_col],
                 marker_color=CITY_PURPLE, opacity=0.8,
-                hovertemplate="%{x}: %{y:,} visitors<extra></extra>",
+                hovertemplate=f"%{{x}}: %{{y:,}} {t('cit.hover.visitors')}<extra></extra>",
             ))
             peak_lib = lib_annual.loc[lib_annual[lib_col].idxmax()]
             fig_lib.add_annotation(
                 x=peak_lib["Jahr"], y=peak_lib[lib_col],
-                text=f"Peak: {int(peak_lib[lib_col]):,}".replace(",", "."),
+                text=f"{t('cit.peak')}: {int(peak_lib[lib_col]):,}".replace(",", "."),
                 showarrow=True, arrowhead=2, ax=30, ay=-30,
             )
             fig_lib.update_layout(
                 template=PLOTLY_TEMPLATE,
-                yaxis_title="Visitors / year", yaxis=dict(tickformat=",d"),
+                yaxis_title=t("cit.axis.visitors"), yaxis=dict(tickformat=",d"),
                 margin=dict(l=50, r=10, t=20, b=40), height=280,
             )
             st.plotly_chart(fig_lib, use_container_width=True)
         else:
-            st.info("Library visitor column not found.")
+            st.info(t("cit.info.library_col"))
     except Exception as e:
-        st.info(f"Library data unavailable: {e}")
+        st.info(t("cit.info.library", error=e))
 
 with cult_r:
-    st.caption("Gruson Gewächshäuser (botanical greenhouse) — annual visitors")
+    st.caption(t("cit.cap.gruson"))
     try:
         df_gr = load_kiss("bildung-und-kultur/besuche-gruson-gewaechshaeuser.json")
         gr_col = next((c for c in df_gr.columns if "besucher" in c.lower()), None)
@@ -250,25 +244,21 @@ with cult_r:
             fig_gr = go.Figure(go.Bar(
                 x=gr_annual["Jahr"], y=gr_annual[gr_col],
                 marker_color="#16A34A", opacity=0.8,
-                hovertemplate="%{x}: %{y:,} visitors<extra></extra>",
+                hovertemplate=f"%{{x}}: %{{y:,}} {t('cit.hover.visitors')}<extra></extra>",
             ))
             fig_gr.update_layout(
                 template=PLOTLY_TEMPLATE,
-                yaxis_title="Visitors / year", yaxis=dict(tickformat=",d"),
+                yaxis_title=t("cit.axis.visitors"), yaxis=dict(tickformat=",d"),
                 margin=dict(l=50, r=10, t=20, b=40), height=280,
             )
             st.plotly_chart(fig_gr, use_container_width=True)
         else:
-            st.info("Greenhouse visitor column not found.")
+            st.info(t("cit.info.green_col"))
     except Exception as e:
-        st.info(f"Greenhouse data unavailable: {e}")
+        st.info(t("cit.info.green", error=e))
 
 st.markdown(insight_box(
-    "Library visits peaked before the pandemic and have partially recovered since 2022. "
-    "The Gruson Gewächshäuser draw steady year-round visitors — its climate-controlled "
-    "tropical environment is especially popular in winter months. "
-    "Both venues are free or low-cost, making them key cultural assets for all residents."
+    t("cit.insight.venues")
 ), unsafe_allow_html=True)
-st.caption("Source: KISS-MD / Stadtbibliothek Magdeburg · Gruson-Gewächshäuser")
-
+st.caption(t("cit.source.venues"))
 

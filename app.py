@@ -15,19 +15,21 @@ st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
 
 if "lang" not in st.session_state:
     st.session_state["lang"] = "de"
+if "_lang_radio" in st.session_state:
+    st.session_state["lang"] = st.session_state["_lang_radio"].lower()
 
 pages = {
     "Dashboard": [
         st.Page("pages/1_Home.py",
-                title="Home Page",               icon="🏠"),
+                title=t("nav.home"),             icon="🏠"),
         st.Page("pages/CityNav.py",
-                title="City Navigation",         icon="🗺️",  url_path="navigation"),
+                title=t("navi.title"),           icon="🗺️",  url_path="navigation"),
         st.Page("pages/2_Climate.py",
-                title="Climate & Environment",   icon="🌡️",  url_path="climate"),
+                title=t("cli.title"),            icon="🌡️",  url_path="climate"),
         st.Page("pages/3_Population_Housing.py",
-                title="Population & Housing",    icon="🏘️",  url_path="population"),
+                title=t("pop.title"),            icon="🏘️",  url_path="population"),
         st.Page("pages/CityInfo.py",
-                title="City & Culture",          icon="🏛️",  url_path="city"),
+                title=t("cit.title"),            icon="🏛️",  url_path="city"),
     ]
 }
 
