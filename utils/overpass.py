@@ -58,7 +58,7 @@ def fetch_charging() -> list:
     ql = f"""
 [out:json][timeout:20];
 node["amenity"="charging_station"]({_BBOX});
-out tags;
+out;
 """
     items = []
     for el in _query(ql):
@@ -90,7 +90,7 @@ def fetch_transit_stops() -> list:
   node["public_transport"="stop_position"]["bus"="yes"]({_BBOX});
   node["public_transport"="stop_position"]["tram"="yes"]({_BBOX});
 );
-out tags;
+out;
 """
     seen  = set()
     items = []
@@ -111,5 +111,35 @@ out tags;
             "name": name,
             "type": "tram" if is_tram else "bus",
             "ref": tags.get("ref", ""),
+        })
+    return items
+
+
+@st.cache_data(ttl=86400, show_spinner=False)
+def fetch_restaurants() -> list:
+    """OSM restaurants, cafés, bars and fast-food outlets in Magdeburg."""
+    ql = f"""
+[out:json][timeout:25];
+(
+  node["amenity"~"^(restaurant|cafe|bar|fast_food|food_court)$"]({_BBOX});
+  way["amenity"~"^(restaurant|cafe|bar|fast_food|food_court)$"]({_BBOX});
+);
+out center tags;
+"""
+    items = []
+    for el in _query(ql):
+        tags = el.get("tags", {})
+        if el.get("type") == "node":
+            lat, lon = el.get("lat"), el.get("lon")
+        else:
+            c = el.get("center", {})
+            lat, lon = c.get("lat"), c.get("lon")
+        if lat is None or lon is None:
+            continue
+        items.append({
+            "lat": lat, "lon": lon,
+            "name": tags.get("name", ""),
+            "amenity": tags.get("amenity", "restaurant"),
+            "cuisine": tags.get("cuisine", ""),
         })
     return items

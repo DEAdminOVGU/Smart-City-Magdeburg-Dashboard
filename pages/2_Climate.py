@@ -6,7 +6,8 @@ from datetime import datetime, date, timedelta
 
 from utils.data_loader import load_klima_monat, load_klima_tag, load_kiss
 from utils.chart_helpers import heatmap
-from utils.live_api import fetch_weather, fetch_air_quality, fetch_weather_forecast
+from utils.live_api import (fetch_weather, fetch_air_quality, fetch_weather_forecast,
+                             fetch_recent_daily_weather, fetch_co2_trend)
 from utils.constants import (
     MONTHS_DE, MONTHS_DE_ORDER, MD_TEAL, MD_BLUE, MD_RED, MD_ORANGE, PLOTLY_TEMPLATE
 )
@@ -186,14 +187,15 @@ if forecast:
 st.markdown(section_header("Last 14 Days — Temperature & Precipitation", color=MD_TEAL), unsafe_allow_html=True)
 
 try:
-    df_d = df_daily.copy()
-    # Ensure date column is parsed
-    if "date" in df_d.columns:
-        df_d["date"] = pd.to_datetime(df_d["date"], errors="coerce")
-    elif "MESS_DATUM" in df_d.columns:
-        df_d["date"] = pd.to_datetime(df_d["MESS_DATUM"].astype(str), format="%Y%m%d", errors="coerce")
-
-    df_d = df_d[df_d["TMK"].notna()].sort_values("date").tail(14)
+    # Try live BrightSky data first; fall back to static DWD file
+    df_d = fetch_recent_daily_weather(14)
+    if df_d.empty:
+        df_d = df_daily.copy()
+        if "date" in df_d.columns:
+            df_d["date"] = pd.to_datetime(df_d["date"], errors="coerce")
+        elif "MESS_DATUM" in df_d.columns:
+            df_d["date"] = pd.to_datetime(df_d["MESS_DATUM"].astype(str), format="%Y%m%d", errors="coerce")
+        df_d = df_d[df_d["TMK"].notna()].sort_values("date").tail(14)
 
     week_l, week_r = st.columns(2)
 
@@ -416,6 +418,73 @@ st.markdown(insight_box(
 st.caption(f"Baseline (1961–1990): {baseline:.2f} °C · DWD station 03126 · Data from 1834")
 
 # ─────────────────────────────────────────────────────────────────────────────
+# SECTION 5b: HISTORICAL ANNUAL MEANS — TEMPERATURE & PRESSURE
+# ─────────────────────────────────────────────────────────────────────────────
+st.markdown(section_header("Historical Annual Means — Temperature & Pressure", color=MD_TEAL), unsafe_allow_html=True)
+
+hist_l, hist_r = st.columns(2)
+
+with hist_l:
+    try:
+        df_ann_temp = (
+            df_monthly[df_monthly["MO_TT"].notna()]
+            .groupby("year")["MO_TT"].mean()
+            .reset_index()
+            .rename(columns={"MO_TT": "ann_temp"})
+            .sort_values("year")
+        )
+        st.caption("Annual mean temperature (°C) — DWD station 03126")
+        fig_ann_t = go.Figure(go.Scatter(
+            x=df_ann_temp["year"], y=df_ann_temp["ann_temp"],
+            mode="lines+markers",
+            line=dict(color=MD_RED, width=2),
+            marker=dict(size=4),
+            hovertemplate="%{x}: %{y:.1f} °C<extra></extra>",
+        ))
+        fig_ann_t.update_layout(
+            template=PLOTLY_TEMPLATE,
+            yaxis_title="°C",
+            margin=dict(l=50, r=10, t=20, b=40),
+            height=280,
+        )
+        st.plotly_chart(fig_ann_t, use_container_width=True)
+    except Exception:
+        st.info("Annual temperature data unavailable.")
+
+with hist_r:
+    try:
+        _pp_col = next((c for c in df_monthly.columns if "PP" in c.upper() or "druck" in c.lower()), None)
+        if _pp_col:
+            df_ann_p = (
+                df_monthly[df_monthly[_pp_col].notna()]
+                .groupby("year")[_pp_col].mean()
+                .reset_index()
+                .rename(columns={_pp_col: "ann_pressure"})
+                .sort_values("year")
+            )
+            st.caption("Annual mean air pressure (hPa) — DWD station 03126")
+            fig_ann_p = go.Figure(go.Scatter(
+                x=df_ann_p["year"], y=df_ann_p["ann_pressure"],
+                mode="lines+markers",
+                line=dict(color=MD_BLUE, width=2),
+                marker=dict(size=4),
+                hovertemplate="%{x}: %{y:.1f} hPa<extra></extra>",
+            ))
+            fig_ann_p.update_layout(
+                template=PLOTLY_TEMPLATE,
+                yaxis_title="hPa",
+                margin=dict(l=50, r=10, t=20, b=40),
+                height=280,
+            )
+            st.plotly_chart(fig_ann_p, use_container_width=True)
+        else:
+            st.info("Pressure data not available in DWD dataset.")
+    except Exception:
+        st.info("Annual pressure data unavailable.")
+
+st.caption("Source: DWD station 03126 Magdeburg · Monthly climate data aggregated to annual means")
+
+# ─────────────────────────────────────────────────────────────────────────────
 # SECTION 6: PRECIPITATION HEATMAP (existing)
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown(section_header("Monthly Precipitation Heatmap", color=MD_TEAL), unsafe_allow_html=True)
@@ -582,3 +651,43 @@ try:
 
 except Exception as e:
     st.warning(f"Air quality data could not be loaded: {e}")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 9: GLOBAL CO₂ TREND (MAUNA LOA)
+# ─────────────────────────────────────────────────────────────────────────────
+st.markdown(section_header("Global CO₂ Trend (Mauna Loa Observatory reference)", color=MD_TEAL), unsafe_allow_html=True)
+
+df_co2 = fetch_co2_trend()
+if not df_co2.empty:
+    latest_co2 = float(df_co2["mean"].iloc[-1])
+    latest_yr  = int(df_co2["year"].iloc[-1])
+    fig_co2 = go.Figure(go.Scatter(
+        x=df_co2["year"], y=df_co2["mean"],
+        mode="lines",
+        fill="tozeroy",
+        fillcolor=MD_TEAL + "20",
+        line=dict(color=MD_TEAL, width=2),
+        hovertemplate="%{x}: %{y:.1f} ppm CO₂<extra></extra>",
+    ))
+    fig_co2.add_annotation(
+        x=latest_yr, y=latest_co2,
+        text=f"<b>{latest_co2:.1f} ppm ({latest_yr})</b>",
+        showarrow=True, arrowhead=2, ax=-60, ay=-30,
+        font=dict(size=12, color=MD_RED),
+    )
+    fig_co2.update_layout(
+        template=PLOTLY_TEMPLATE,
+        yaxis_title="CO₂ (ppm)",
+        xaxis_title="Year",
+        margin=dict(l=50, r=20, t=30, b=40),
+    )
+    st.plotly_chart(fig_co2, use_container_width=True)
+    st.markdown(insight_box(
+        f"Global atmospheric CO₂ reached {latest_co2:.1f} ppm in {latest_yr} — up from 315 ppm when "
+        "systematic measurements began at Mauna Loa in 1958. The steady rise reflects accumulated "
+        "fossil fuel emissions globally. This trend provides the planetary backdrop for local "
+        "climate action in cities like Magdeburg."
+    ), unsafe_allow_html=True)
+    st.caption("Source: NOAA Mauna Loa Observatory — annual mean CO₂ concentration (global reference)")
+else:
+    st.info("CO₂ trend data unavailable — check network access to NOAA servers.")

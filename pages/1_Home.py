@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from utils.live_api import (
     fetch_weather, fetch_air_quality,
     fetch_weather_forecast, fetch_city_news,
+    fetch_elbe_level, fetch_uv_index,
 )
 from utils.data_loader import load_kiss
 from utils.ui_helpers import section_header, topic_card
@@ -65,11 +66,14 @@ weather    = fetch_weather()
 pm25       = fetch_air_quality()
 forecast   = fetch_weather_forecast()
 news_items = fetch_city_news()
+elbe       = fetch_elbe_level()
+uv_index   = fetch_uv_index()
 
-temp     = weather.get("temperature")        if weather else None
-wind_spd = weather.get("wind_speed")         if weather else None
-cond     = weather.get("condition")          if weather else None
-humidity = weather.get("relative_humidity")  if weather else None
+temp      = weather.get("temperature")       if weather else None
+wind_spd  = weather.get("wind_speed")        if weather else None
+cond      = weather.get("condition")         if weather else None
+humidity  = weather.get("relative_humidity") if weather else None
+elbe_val  = elbe.get("value")               if elbe    else None
 
 # ── Page header with fading background ───────────────────────────────────────
 _img_path = os.path.normpath(
@@ -206,41 +210,46 @@ with weather_col:
 with pulse_col:
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-    temp_color = ("#C0392B" if temp is not None and temp < 0
-                  else "#E65100" if temp is not None and temp < 5
-                  else "#007A6E")
-    _temp_val = f"{temp:.1f} °C" if temp is not None else "—"
+    uv_color = ("#007A6E" if uv_index is None or uv_index <= 2
+                else "#F59E0B" if uv_index <= 5
+                else "#E65100" if uv_index <= 7
+                else "#C0392B")
+    uv_risk  = ("Low" if uv_index is None or uv_index <= 2
+                else "Moderate" if uv_index <= 5
+                else "High" if uv_index <= 7
+                else "Very High")
+    _uv_val  = f"{uv_index:.1f}" if uv_index is not None else "—"
     st.markdown(f"""
 <div style="background:#fff;border-radius:12px;padding:18px 16px;
             box-shadow:0 2px 12px rgba(0,0,0,0.06);
-            border-left:4px solid {temp_color};margin-bottom:4px;">
+            border-left:4px solid {uv_color};margin-bottom:4px;">
   <div style="display:flex;align-items:center;gap:14px;">
-    <div style="flex-shrink:0;">{TEMP_ICON}</div>
+    <div style="flex-shrink:0;font-size:2.6rem;line-height:1;">☀️</div>
     <div>
       <div style="font-size:0.68rem;font-weight:800;color:#999;text-transform:uppercase;
-                  letter-spacing:0.1em;margin-bottom:4px;">Temperature</div>
-      <div style="font-size:1.8rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{_temp_val}</div>
-      <div style="font-size:0.78rem;color:#999;margin-top:4px;">Current outdoor temperature</div>
+                  letter-spacing:0.1em;margin-bottom:4px;">UV Index</div>
+      <div style="font-size:1.8rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{_uv_val}</div>
+      <div style="font-size:0.78rem;color:#999;margin-top:4px;">Risk level: {uv_risk}</div>
     </div>
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-    wind_color = ("#C0392B" if wind_spd is not None and wind_spd > 60
-                  else "#F59E0B" if wind_spd is not None and wind_spd > 40
-                  else "#007A6E")
-    _wind_val = f"{wind_spd:.0f} km/h" if wind_spd is not None else "—"
+    elbe_color = ("#007A6E" if elbe_val is None or elbe_val < 200
+                  else "#F59E0B" if elbe_val < 400
+                  else "#C0392B")
+    _elbe_val = f"{elbe_val:.0f} cm" if elbe_val is not None else "—"
     st.markdown(f"""
 <div style="background:#fff;border-radius:12px;padding:18px 16px;
             box-shadow:0 2px 12px rgba(0,0,0,0.06);
-            border-left:4px solid {wind_color};margin-bottom:4px;">
+            border-left:4px solid {elbe_color};margin-bottom:4px;">
   <div style="display:flex;align-items:center;gap:14px;">
-    <div style="flex-shrink:0;">{WIND_ICON}</div>
+    <div style="flex-shrink:0;font-size:2.6rem;line-height:1;">🌊</div>
     <div>
       <div style="font-size:0.68rem;font-weight:800;color:#999;text-transform:uppercase;
-                  letter-spacing:0.1em;margin-bottom:4px;">Wind Speed</div>
-      <div style="font-size:1.8rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{_wind_val}</div>
-      <div style="font-size:0.78rem;color:#999;margin-top:4px;">Alert threshold: 60 km/h</div>
+                  letter-spacing:0.1em;margin-bottom:4px;">Elbe Water Level</div>
+      <div style="font-size:1.8rem;font-weight:800;color:#1A1A1A;line-height:1.1;">{_elbe_val}</div>
+      <div style="font-size:0.78rem;color:#999;margin-top:4px;">Flood alert: &gt; 400 cm</div>
     </div>
   </div>
 </div>
@@ -340,70 +349,7 @@ if news_items:
     st.caption("Source: Landeshauptstadt Magdeburg — City Press Office RSS feed")
 
 else:
-    # Data-driven fallback
-    fallback_items = []
-    try:
-        df_e = load_kiss("gesundheit-und-soziales/rettungsdienst-einsaetze.json")
-        df_e = df_e.rename(columns={"Rettungsdienst-Einsätze gesamt": "Total"})
-        ly = int(df_e["Jahr"].max())
-        total = int(df_e[df_e["Jahr"] == ly]["Total"].sum())
-        fallback_items.append({
-            "icon": "🚑",
-            "title": f"Emergency Services: {total:,} Callouts in {ly}".replace(",", "."),
-            "body": (f"Magdeburg's rescue services responded to {total:,} emergencies in {ly} — "
-                     f"roughly {total // 365:,} per day. Demand has grown steadily since 1991.").replace(",", "."),
-        })
-    except Exception:
-        pass
-    try:
-        df_s = load_kiss("bildung-und-kultur/anzahl-der-studierenden-im-wintersemester.json")
-        df_s = df_s.rename(columns={"var4": "Students"})
-        df_s = df_s[df_s["Students"].notna()]
-        ly = int(df_s["Jahr"].max())
-        total = int(df_s[df_s["Jahr"] == ly]["Students"].sum())
-        fallback_items.append({
-            "icon": "🎓",
-            "title": f"University City: {total:,} Students in {ly}/{ly+1}".replace(",", "."),
-            "body": ("Otto-von-Guericke-Universität and Hochschule Magdeburg-Stendal together "
-                     "make Magdeburg one of Saxony-Anhalt's most important academic locations."),
-        })
-    except Exception:
-        pass
-    try:
-        df_bev = load_kiss("bevoelkerung/einwohnerinnen-und-einwohner.json")
-        df_bev = df_bev.rename(columns={"var2": "Population"})
-        df_bev = df_bev[df_bev["Population"].notna()].sort_values("Jahr")
-        ly = int(df_bev["Jahr"].max())
-        pop = int(df_bev[df_bev["Jahr"] == ly]["Population"].iloc[-1])
-        fallback_items.append({
-            "icon": "🏙️",
-            "title": f"Magdeburg: {pop:,} Residents ({ly})".replace(",", "."),
-            "body": ("Magdeburg is Saxony-Anhalt's capital and largest city, with a growing "
-                     "population after years of post-reunification decline."),
-        })
-    except Exception:
-        pass
-
-    fallback_items.append({
-        "icon": "📊",
-        "title": "Transparency & Open Data",
-        "body": ("All data in this dashboard is sourced from Magdeburg's open data portal "
-                 "(KISS-MD) and public APIs. Explore the topic pages for detailed breakdowns."),
-    })
-
-    news_cols = st.columns(2)
-    for i, item in enumerate(fallback_items[:4]):
-        with news_cols[i % 2]:
-            st.markdown(f"""
-<div style="background:#fff;border-radius:12px;padding:16px 18px;
-            box-shadow:0 2px 10px rgba(0,0,0,0.06);margin-bottom:10px;
-            border-left:3px solid #007A6E;">
-  <div style="font-size:1.3rem;margin-bottom:6px;">{item["icon"]}</div>
-  <div style="font-weight:700;font-size:0.88rem;color:#1A1A1A;margin-bottom:6px;">{item["title"]}</div>
-  <div style="font-size:0.78rem;color:#64748b;line-height:1.5;">{item["body"]}</div>
-</div>
-""", unsafe_allow_html=True)
-    st.caption("Source: KISS-MD / Landeshauptstadt Magdeburg open data (live RSS unavailable)")
+    st.info("Live news feed unavailable — visit magdeburg.de for the latest city news.")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 6: CITY AT A GLANCE
@@ -412,34 +358,15 @@ st.markdown(section_header("City at a Glance"), unsafe_allow_html=True)
 st.caption("Latest headline figures from each topic — click a tile to explore in depth.")
 
 TOPIC_COLORS = {
-    "climate":    "#00897B",
     "population": "#1565C0",
     "navigation": "#D4481C",
     "city":       "#6D28D9",
-    "env":        "#2E7D32",
 }
 
-glance_cols = st.columns(5)
+glance_cols = st.columns(3)
 
-# Tile 1: Climate — annual mean temperature
+# Tile 1: Population — registered residents (city total)
 with glance_cols[0]:
-    try:
-        df_c = load_kiss("wetter/witterung-in-magdeburg.json")
-        df_c = df_c[df_c["Lufttemperatur Jahresmittel"].notna()].sort_values("Jahr")
-        ly = int(df_c["Jahr"].max()); py = ly - 1
-        t_ly = float(df_c[df_c["Jahr"] == ly]["Lufttemperatur Jahresmittel"].iloc[0])
-        t_py = float(df_c[df_c["Jahr"] == py]["Lufttemperatur Jahresmittel"].iloc[0])
-        diff = t_ly - t_py
-        card_html = topic_card("🌡️", "Climate", f"{t_ly:.1f}", "°C annual mean",
-                               f"{abs(diff):.1f}°C vs {py}", diff >= 0,
-                               str(ly), color=TOPIC_COLORS["climate"], href="/climate")
-    except Exception:
-        card_html = topic_card("🌡️", "Climate", "—", "°C annual mean", "no data", True,
-                               "—", color=TOPIC_COLORS["climate"], href="/climate")
-    st.markdown(card_html, unsafe_allow_html=True)
-
-# Tile 2: Population — registered residents (city total)
-with glance_cols[1]:
     try:
         df_p = load_kiss("bevoelkerung/entwicklung-der-hauptwohnsitzbevoelkerung.json")
         df_city = df_p[df_p["Stadtteil-Nr."] == 15003].sort_values("Jahr")
@@ -455,8 +382,8 @@ with glance_cols[1]:
                                "—", color=TOPIC_COLORS["population"], href="/population")
     st.markdown(card_html, unsafe_allow_html=True)
 
-# Tile 3: Navigation — MVB annual ridership
-with glance_cols[2]:
+# Tile 2: Navigation — MVB annual ridership
+with glance_cols[1]:
     try:
         df_m = load_kiss("verkehr/befoerderte-personen-der-magdeburger-verkehrsbetriebe-gmbh-und-co-kg.json")
         df_m["_v"] = pd.to_numeric(df_m["var2"], errors="coerce")
@@ -473,41 +400,23 @@ with glance_cols[2]:
                                "—", color=TOPIC_COLORS["navigation"], href="/navigation")
     st.markdown(card_html, unsafe_allow_html=True)
 
-# Tile 4: City & Culture — annual tourist arrivals
-with glance_cols[3]:
+# Tile 3: City & Culture — cultural events
+with glance_cols[2]:
     try:
         df_t = load_kiss("erholung-sport-und-fremdenverkehr/ankuenfte-der-gaeste-in-magdeburg.json")
         df_t["_a"] = pd.to_numeric(df_t["Ankünfte gesamt"], errors="coerce")
         yr_totals = df_t[df_t["_a"].notna()].groupby("Jahr")["_a"].sum()
-        yr_totals = yr_totals[yr_totals > 100_000]  # exclude partial years
+        yr_totals = yr_totals[yr_totals > 100_000]
         ly = int(yr_totals.index.max()); py = ly - 1
         a_ly = int(yr_totals[ly])
         a_py = int(yr_totals[py]) if py in yr_totals.index else a_ly
         diff_pct = (a_ly - a_py) / a_py * 100 if a_py else 0
-        card_html = topic_card("✈️", "City & Culture", f"{a_ly/1000:.0f}k", "tourist arrivals",
+        card_html = topic_card("🏛️", "City & Culture", f"{a_ly/1000:.0f}k", "guest arrivals",
                                f"{abs(diff_pct):.1f}% vs {py}", diff_pct >= 0,
                                str(ly), color=TOPIC_COLORS["city"], href="/city")
     except Exception:
-        card_html = topic_card("✈️", "City & Culture", "—", "tourist arrivals", "no data", True,
+        card_html = topic_card("🏛️", "City & Culture", "—", "guest arrivals", "no data", True,
                                "—", color=TOPIC_COLORS["city"], href="/city")
-    st.markdown(card_html, unsafe_allow_html=True)
-
-# Tile 5: Environment — PM10 annual mean air quality
-with glance_cols[4]:
-    try:
-        df_e = load_kiss("energie-und-umwelt/jahresmittelwerte-der-feinstaubpartikel-pm10.json")
-        df_e["_pm"] = pd.to_numeric(df_e["var3"], errors="coerce")
-        df_e = df_e[df_e["_pm"].notna()].sort_values("Jahr")
-        ly = int(df_e["Jahr"].max()); py = ly - 1
-        pm_ly = float(df_e[df_e["Jahr"] == ly]["_pm"].iloc[-1])
-        pm_py = float(df_e[df_e["Jahr"] == py]["_pm"].iloc[-1]) if py in df_e["Jahr"].values else pm_ly
-        diff = pm_ly - pm_py
-        card_html = topic_card("🍃", "Environment", f"{pm_ly:.0f}", "µg/m³ PM10",
-                               f"{abs(diff):.0f} µg/m³ vs {py}", diff <= 0,
-                               str(ly), color=TOPIC_COLORS["env"], href="/climate")
-    except Exception:
-        card_html = topic_card("🍃", "Environment", "—", "µg/m³ PM10", "no data", True,
-                               "—", color=TOPIC_COLORS["env"], href="/climate")
     st.markdown(card_html, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────

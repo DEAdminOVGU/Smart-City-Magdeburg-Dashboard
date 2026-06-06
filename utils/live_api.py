@@ -234,6 +234,73 @@ def fetch_departures(ext_id: str, max_journeys: int = 12) -> list:
         return []
 
 
+@st.cache_data(ttl=600, show_spinner=False)
+def fetch_uv_index() -> float | None:
+    """Fetch current UV index from Open-Meteo (free, no key required)."""
+    try:
+        r = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={"latitude": LAT, "longitude": LON, "current": "uv_index",
+                    "timezone": "Europe/Berlin"},
+            timeout=6,
+        )
+        r.raise_for_status()
+        return r.json().get("current", {}).get("uv_index")
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def fetch_recent_daily_weather(days: int = 14):
+    """Fetch recent daily weather from BrightSky, aggregated from hourly data."""
+    import pandas as pd
+    end   = datetime.now().date()
+    start = end - timedelta(days=days)
+    try:
+        r = requests.get(
+            "https://api.brightsky.dev/weather",
+            params={"lat": LAT, "lon": LON,
+                    "date": start.isoformat(), "last_date": end.isoformat()},
+            timeout=10,
+        )
+        r.raise_for_status()
+        rows = r.json().get("weather", [])
+        if not rows:
+            return pd.DataFrame()
+        df = pd.DataFrame(rows)
+        df["date"] = pd.to_datetime(df["timestamp"].str[:10])
+        daily = df.groupby("date").agg(
+            TMK=("temperature", "mean"),
+            TXK=("temperature", "max"),
+            TNK=("temperature", "min"),
+            RSK=("precipitation", "sum"),
+        ).reset_index()
+        return daily
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=86400, show_spinner=False)
+def fetch_co2_trend():
+    """Fetch annual mean CO₂ from NOAA Mauna Loa Observatory (global reference)."""
+    import pandas as pd
+    try:
+        r = requests.get(
+            "https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_annmean_mlo.csv",
+            timeout=10,
+        )
+        r.raise_for_status()
+        lines = [ln for ln in r.text.splitlines() if not ln.strip().startswith("#") and ln.strip()]
+        from io import StringIO
+        df = pd.read_csv(StringIO("\n".join(lines)), header=None,
+                         names=["year", "mean", "unc"])
+        df["year"] = pd.to_numeric(df["year"], errors="coerce")
+        df["mean"] = pd.to_numeric(df["mean"], errors="coerce")
+        return df.dropna(subset=["year", "mean"]).sort_values("year")
+    except Exception:
+        return pd.DataFrame()
+
+
 @st.cache_data(ttl=300, show_spinner=False)
 def fetch_service_disruptions() -> list:
     """Fetch active service disruptions from HAFAS HIM search."""

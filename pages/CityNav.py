@@ -10,7 +10,7 @@ import pandas as pd
 from utils.live_api   import (fetch_weather, fetch_elbe_level,
                                load_mvb_stops, fetch_departures,
                                fetch_service_disruptions)
-from utils.overpass   import fetch_parking, fetch_charging, fetch_transit_stops
+from utils.overpass   import fetch_parking, fetch_charging, fetch_transit_stops, fetch_restaurants
 from utils.ui_helpers import section_header, live_card
 from utils.constants  import PLOTLY_TEMPLATE
 
@@ -22,7 +22,7 @@ st.title("City Navigation")
 st.markdown(
     "<p style='font-size:0.97rem;color:#64748b;max-width:680px;margin:-6px 0 20px 0;'>"
     "Explore Magdeburg's transport network — parking, EV charging, public transit, "
-    "and traffic accident hotspots on an interactive map."
+    "restaurants, and traffic accident hotspots on an interactive map."
     "</p>",
     unsafe_allow_html=True,
 )
@@ -91,14 +91,15 @@ else:
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown(section_header("Interactive City Map", color=NAV_ORANGE), unsafe_allow_html=True)
 st.caption(
-    "Layers: district boundaries · parking · EV charging · public transit stops · accident hotspots. "
+    "Layers: district boundaries · parking · EV charging · transit stops · restaurants & cafés · accident hotspots. "
     "Use the layer control (top-right) to toggle layers on/off."
 )
 
 with st.spinner("Loading map data from OpenStreetMap…"):
-    parking_pts  = fetch_parking()
-    charging_pts = fetch_charging()
-    transit_pts  = fetch_transit_stops()
+    parking_pts     = fetch_parking()
+    charging_pts    = fetch_charging()
+    transit_pts     = fetch_transit_stops()
+    restaurant_pts  = fetch_restaurants()
 
 # Load accident GeoJSON
 accident_pts = []
@@ -230,7 +231,28 @@ for c in charging_pts:
     ).add_to(fg_charging)
 fg_charging.add_to(m)
 
-# Layer 5: Accident hotspots (clustered red markers)
+# Layer 5: Restaurants & Cafés
+fg_food = folium.FeatureGroup(name="🍽️ Restaurants & Cafés", show=False)
+food_cluster = MarkerCluster(options={"maxClusterRadius": 45, "disableClusteringAtZoom": 15})
+for r in restaurant_pts:
+    cuisine_str = f"<br>Cuisine: {r['cuisine']}" if r.get("cuisine") else ""
+    folium.CircleMarker(
+        location=[r["lat"], r["lon"]],
+        radius=5,
+        color="#E65100",
+        fill=True,
+        fill_color="#E65100",
+        fill_opacity=0.8,
+        popup=folium.Popup(
+            f"<b>🍽️ {r['name'] or 'Restaurant'}</b>{cuisine_str}",
+            max_width=200,
+        ),
+        tooltip=r["name"] or r.get("amenity", "restaurant").title(),
+    ).add_to(food_cluster)
+food_cluster.add_to(fg_food)
+fg_food.add_to(m)
+
+# Layer 6: Accident hotspots (clustered red markers)
 if accident_pts:
     fg_accidents = folium.FeatureGroup(name="🚨 Accident Hotspots", show=False)
     acc_cluster = MarkerCluster(
@@ -330,88 +352,7 @@ with stat_cols[3]:
 st.caption("Sources: OpenStreetMap / Overpass API (parking, charging, transit) · Unfallatlas (accidents)")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SECTION 4: ACCIDENT INSIGHTS
-# ─────────────────────────────────────────────────────────────────────────────
-if accident_pts:
-    st.markdown(section_header("Traffic Accident Analysis", color=NAV_ORANGE), unsafe_allow_html=True)
-
-    df_acc = pd.DataFrame(accident_pts)
-
-    chart_col, donut_col = st.columns([3, 2])
-
-    with chart_col:
-        st.caption("Reported accidents by year")
-        yr_counts = df_acc.groupby("year").size().reset_index(name="count").sort_values("year")
-        fig_bar = go.Figure(go.Bar(
-            x=yr_counts["year"], y=yr_counts["count"],
-            marker_color=NAV_ORANGE, opacity=0.85,
-            hovertemplate="%{x}: %{y} accidents<extra></extra>",
-        ))
-        fig_bar.update_layout(
-            template=PLOTLY_TEMPLATE,
-            xaxis_title="Year",
-            yaxis_title="Accidents",
-            yaxis=dict(tickformat=",d"),
-            margin=dict(l=50, r=20, t=20, b=40),
-            height=300,
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
-
-    with donut_col:
-        st.caption("Accident involvement by road user type")
-        involved_totals = {
-            "Car (PKW)":       int(df_acc["pkw"].sum()),
-            "Cyclist":         int(df_acc["rad"].sum()),
-            "Pedestrian":      int(df_acc["fuss"].sum()),
-            "Motorbike/Krad":  int(df_acc["krad"].sum()),
-        }
-        labels = list(involved_totals.keys())
-        values = list(involved_totals.values())
-        colours = [NAV_ORANGE, "#1565C0", "#2E7D32", "#6A1B9A"]
-        fig_donut = go.Figure(go.Pie(
-            labels=labels, values=values,
-            hole=0.45,
-            marker=dict(colors=colours),
-            hovertemplate="%{label}: %{value} (%{percent})<extra></extra>",
-            textposition="outside",
-            textfont=dict(size=11),
-        ))
-        fig_donut.update_layout(
-            template=PLOTLY_TEMPLATE,
-            showlegend=False,
-            margin=dict(l=0, r=0, t=20, b=20),
-            height=300,
-        )
-        st.plotly_chart(fig_donut, use_container_width=True)
-
-    # Severity breakdown
-    sev_map = {1: "Fatal", 2: "Serious injury", 3: "Minor injury"}
-    df_acc["severity"] = df_acc["category"].map(sev_map).fillna("Unknown")
-    sev_counts = df_acc["severity"].value_counts()
-
-    sev_html = "".join(
-        f'<span style="background:#f1f5f9;border-radius:8px;padding:4px 12px;margin:3px;'
-        f'font-size:0.78rem;font-weight:700;color:#374151;display:inline-block;">'
-        f'{sev} &nbsp;<span style="color:{NAV_ORANGE};">{cnt:,}</span></span>'.replace(",", ".")
-        for sev, cnt in sev_counts.items()
-    )
-    st.markdown(
-        f'<div style="margin:4px 0 6px 0;">{sev_html}</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown("""
-<div style="background:#fff7f5;border-left:4px solid #D4481C;border-radius:0 10px 10px 0;
-            padding:11px 18px;margin:6px 0 12px 0;font-size:0.88rem;color:#7f1d1d;
-            line-height:1.55;font-weight:500;">
-  💡 Cyclist involvement is disproportionately high relative to modal share.
-  The Elbe bridge approaches and intersections in the city centre are recurrent hotspot zones.
-  Check the heatmap layer above to identify specific high-risk locations.
-</div>
-""", unsafe_allow_html=True)
-    st.caption("Source: Unfallatlas / Statistische Ämter — road traffic accidents reported to police")
-
-# ─────────────────────────────────────────────────────────────────────────────
-# SECTION 5: LIVE DEPARTURES
+# SECTION 4: LIVE DEPARTURES
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown(section_header("Live Departures — MVB", color=NAV_ORANGE), unsafe_allow_html=True)
 

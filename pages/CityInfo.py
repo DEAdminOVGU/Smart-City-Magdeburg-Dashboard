@@ -7,8 +7,8 @@ import plotly.graph_objects as go
 from datetime import date, timedelta
 
 from utils.data_loader import load_kiss
-from utils.constants import MD_TEAL, MD_ORANGE, PLOTLY_TEMPLATE, MONTHS_DE
-from utils.ui_helpers import hero_stat, section_header, insight_box, live_card
+from utils.constants import MD_TEAL, MD_ORANGE, PLOTLY_TEMPLATE
+from utils.ui_helpers import section_header, insight_box, live_card
 
 CITY_PURPLE = "#6D28D9"
 
@@ -57,202 +57,69 @@ def next_first_monday() -> date:
 st.title("City & Culture")
 st.markdown(
     "<p style='font-size:0.97rem;color:#64748b;max-width:700px;margin:-6px 0 20px 0;'>"
-    "Everything you need as a citizen or visitor — city attractions, upcoming events, "
-    "tourism statistics, cultural venues, and essential service contacts."
+    "Everything you need as a citizen or visitor — upcoming events, city attractions, "
+    "cultural venues, and essential service contacts."
     "</p>",
     unsafe_allow_html=True,
 )
-st.caption("Sources: KISS-MD / Statistisches Amt Magdeburg · Tourismusverband Sachsen-Anhalt · Landeshauptstadt Magdeburg")
-
-# ── Hero KPI: guest arrivals ──────────────────────────────────────────────────
-try:
-    df_arr = load_kiss("erholung-sport-und-fremdenverkehr/ankuenfte-der-gaeste-in-magdeburg.json")
-    arr_col = next((c for c in df_arr.columns if "ankünfte" in c.lower() and "gesamt" in c.lower()), None)
-    if not arr_col:
-        arr_col = next((c for c in df_arr.columns if "ankünfte" in c.lower()), None)
-    if arr_col:
-        df_arr[arr_col] = pd.to_numeric(df_arr[arr_col], errors="coerce")
-        by_year = df_arr.groupby("Jahr")[arr_col].sum()
-        cy, py = int(by_year.index.max()), int(by_year.index.max()) - 1
-        arr_cy = int(by_year[cy])
-        arr_py = int(by_year.get(py, arr_cy))
-        arr_delta = arr_cy - arr_py
-        st.markdown(hero_stat(
-            "✈️",
-            f"{arr_cy:,}".replace(",", "."),
-            f"Guest arrivals in Magdeburg · {cy}",
-            f"{'+' if arr_delta >= 0 else ''}{arr_delta:,} vs {py}".replace(",", "."),
-            delta_positive=arr_delta >= 0,
-            color=CITY_PURPLE,
-        ), unsafe_allow_html=True)
-except Exception:
-    pass
+st.caption("Sources: KISS-MD / Statistisches Amt Magdeburg · Landeshauptstadt Magdeburg")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SECTION 1: TOURISM AT A GLANCE
+# SECTION 1: EVENTS CALENDAR
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Tourism at a Glance", color=CITY_PURPLE), unsafe_allow_html=True)
+st.markdown(section_header("Events Calendar — Magdeburg", color=CITY_PURPLE), unsafe_allow_html=True)
 
-t1, t2, t3, t4 = st.columns(4)
+EVENTS = [
+    {"name": "Stadtfest Magdeburg",      "icon": "🎉", "month": 6,    "day": 14,
+     "desc": "City festival — music, food, and culture at the Elbe riverside."},
+    {"name": "Magdeburg Marathon",        "icon": "🏃", "month": 4,    "day": 20,
+     "desc": "Annual city marathon through Magdeburg's historic districts."},
+    {"name": "Kulturnacht",               "icon": "🎭", "month": 10,   "day": 12,
+     "desc": "One night, dozens of venues — museums, galleries, theatres open until midnight."},
+    {"name": "Altstadtfest",             "icon": "🏰", "month": 8,    "day": 23,
+     "desc": "Medieval old-town festival at the Dom and Hundertwasserhaus."},
+    {"name": "Weihnachtsmarkt",           "icon": "🎄", "month": 11,   "day": 24,
+     "desc": "Magdeburg Christmas market at the Cathedral square — one of Germany's oldest."},
+    {"name": "City Council Open Session", "icon": "🏛️", "month": None, "day": None,
+     "desc": "Stadtrat public meeting — citizens can attend and observe."},
+]
 
-with t1:
-    try:
-        df_a = load_kiss("erholung-sport-und-fremdenverkehr/ankuenfte-der-gaeste-in-magdeburg.json")
-        col_a = next((c for c in df_a.columns if "ankünfte" in c.lower() and "gesamt" in c.lower()), None) or \
-                next((c for c in df_a.columns if "ankünfte" in c.lower()), None)
-        df_a[col_a] = pd.to_numeric(df_a[col_a], errors="coerce")
-        cy_val = int(df_a.groupby("Jahr")[col_a].sum().iloc[-1])
-        cy_yr  = int(df_a["Jahr"].max())
-        st.markdown(live_card("✈️", "Guest Arrivals",
-            f"{cy_val:,}".replace(",", "."), f"Total visitors · {cy_yr}",
-            status_color=CITY_PURPLE), unsafe_allow_html=True)
-    except Exception:
-        st.markdown(live_card("✈️", "Guest Arrivals", "—", "data unavailable",
-            status_color=CITY_PURPLE), unsafe_allow_html=True)
+upcoming = []
+for ev in EVENTS:
+    ev_date = next_first_monday() if ev["month"] is None else next_occurrence(ev["month"], ev["day"])
+    upcoming.append({**ev, "date": ev_date})
+upcoming.sort(key=lambda x: x["date"])
 
-with t2:
-    try:
-        df_o = load_kiss("erholung-sport-und-fremdenverkehr/anzahl-der-uebernachtungen-der-gaeste-in-magdeburg.json")
-        col_o = next((c for c in df_o.columns if "übernachtungen" in c.lower() and "gesamt" in c.lower()), None) or \
-                next((c for c in df_o.columns if "übernachtung" in c.lower()), None)
-        df_o[col_o] = pd.to_numeric(df_o[col_o], errors="coerce")
-        o_val = int(df_o.groupby("Jahr")[col_o].sum().iloc[-1])
-        o_yr  = int(df_o["Jahr"].max())
-        st.markdown(live_card("🛏️", "Overnight Stays",
-            f"{o_val:,}".replace(",", "."), f"Nights booked · {o_yr}",
-            status_color=CITY_PURPLE), unsafe_allow_html=True)
-    except Exception:
-        st.markdown(live_card("🛏️", "Overnight Stays", "—", "data unavailable",
-            status_color=CITY_PURPLE), unsafe_allow_html=True)
-
-with t3:
-    try:
-        df_d = load_kiss("erholung-sport-und-fremdenverkehr/durchschnittliche-aufenthaltsdauer-der-gaeste-in-magdeburg.json")
-        col_d = next((c for c in df_d.columns if "aufenthalt" in c.lower() and "gesamt" in c.lower()), None) or \
-                next((c for c in df_d.columns if "aufenthalt" in c.lower()), None)
-        df_d[col_d] = pd.to_numeric(df_d[col_d], errors="coerce")
-        d_val = round(float(df_d[df_d[col_d].notna()].sort_values("Jahr")[col_d].iloc[-1]), 1)
-        d_yr  = int(df_d["Jahr"].max())
-        st.markdown(live_card("⏱️", "Avg Stay Duration",
-            f"{d_val} nights", f"Per visitor · {d_yr}",
-            status_color=CITY_PURPLE), unsafe_allow_html=True)
-    except Exception:
-        st.markdown(live_card("⏱️", "Avg Stay Duration", "—", "data unavailable",
-            status_color=CITY_PURPLE), unsafe_allow_html=True)
-
-with t4:
-    try:
-        df_p = load_kiss("erholung-sport-und-fremdenverkehr/besucher-der-kommunalen-baeder-und-saunen.json")
-        col_p = next((c for c in df_p.columns if "besucher" in c.lower()), None)
-        df_p[col_p] = pd.to_numeric(df_p[col_p], errors="coerce")
-        p_val = int(df_p.groupby("Jahr")[col_p].sum().iloc[-1])
-        p_yr  = int(df_p["Jahr"].max())
-        st.markdown(live_card("🏊", "Public Pool Visitors",
-            f"{p_val:,}".replace(",", "."), f"Municipal pools & saunas · {p_yr}",
-            status_color="#0891B2"), unsafe_allow_html=True)
-    except Exception:
-        st.markdown(live_card("🏊", "Public Pool Visitors", "—", "data unavailable",
-            status_color="#0891B2"), unsafe_allow_html=True)
-
-st.caption("Source: KISS-MD / Tourismusstatistik Sachsen-Anhalt")
-
-# ─────────────────────────────────────────────────────────────────────────────
-# SECTION 2: TOURISM TRENDS
-# ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Tourism Trends", color=CITY_PURPLE), unsafe_allow_html=True)
-
-tr_left, tr_right = st.columns(2)
-
-with tr_left:
-    st.caption("Monthly guest arrivals — domestic vs international")
-    try:
-        df_arr2 = load_kiss("erholung-sport-und-fremdenverkehr/ankuenfte-der-gaeste-in-magdeburg.json")
-        inland_col = next((c for c in df_arr2.columns if "inland" in c.lower()), None)
-        ausland_col = next((c for c in df_arr2.columns if "ausland" in c.lower()), None)
-        if inland_col and ausland_col:
-            df_arr2[inland_col]  = pd.to_numeric(df_arr2[inland_col],  errors="coerce")
-            df_arr2[ausland_col] = pd.to_numeric(df_arr2[ausland_col], errors="coerce")
-            years_avail = sorted(df_arr2["Jahr"].dropna().unique(), reverse=True)
-            sel_yr = st.selectbox("Year", years_avail, key="arr_year")
-            df_m = df_arr2[df_arr2["Jahr"] == sel_yr].copy()
-            df_m["month_num"] = df_m["Monat"].map(MONTHS_DE).fillna(0).astype(int)
-            df_m = df_m.sort_values("month_num")
-            df_m["month_label"] = df_m["month_num"].apply(
-                lambda n: ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][n] if 1 <= n <= 12 else str(n)
-            )
-            fig_arr = go.Figure()
-            fig_arr.add_trace(go.Bar(
-                x=df_m["month_label"], y=df_m[inland_col],
-                name="Domestic", marker_color=CITY_PURPLE,
-                hovertemplate="%{x}: %{y:,}<extra>Domestic</extra>",
-            ))
-            fig_arr.add_trace(go.Bar(
-                x=df_m["month_label"], y=df_m[ausland_col],
-                name="International", marker_color=MD_ORANGE,
-                hovertemplate="%{x}: %{y:,}<extra>International</extra>",
-            ))
-            fig_arr.update_layout(
-                template=PLOTLY_TEMPLATE, barmode="stack",
-                yaxis_title="Arrivals", yaxis=dict(tickformat=",d"),
-                legend=dict(orientation="h", y=-0.2),
-                margin=dict(l=50, r=10, t=20, b=60), height=300,
-            )
-            st.plotly_chart(fig_arr, use_container_width=True)
+ev_cols = st.columns(min(len(upcoming), 4))
+for i, ev in enumerate(upcoming[:4]):
+    with ev_cols[i]:
+        days_away = (ev["date"] - _today).days
+        if days_away == 0:
+            badge, badge_color = "Today!", "#C0392B"
+        elif days_away <= 7:
+            badge, badge_color = f"In {days_away} days", "#E65100"
+        elif days_away <= 30:
+            badge, badge_color = f"In {days_away} days", "#F59E0B"
         else:
-            st.info("Domestic/international breakdown unavailable.")
-    except Exception as e:
-        st.info(f"Arrivals data unavailable: {e}")
+            badge, badge_color = ev["date"].strftime("%d %b %Y"), "#64748b"
 
-with tr_right:
-    st.caption("Annual overnight stays + avg stay duration trend")
-    try:
-        df_ov = load_kiss("erholung-sport-und-fremdenverkehr/anzahl-der-uebernachtungen-der-gaeste-in-magdeburg.json")
-        df_dur = load_kiss("erholung-sport-und-fremdenverkehr/durchschnittliche-aufenthaltsdauer-der-gaeste-in-magdeburg.json")
-        ov_col  = next((c for c in df_ov.columns  if "übernachtung" in c.lower() and "gesamt" in c.lower()), None) or \
-                  next((c for c in df_ov.columns  if "übernachtung" in c.lower()), None)
-        dur_col = next((c for c in df_dur.columns if "aufenthalt" in c.lower() and "gesamt" in c.lower()), None) or \
-                  next((c for c in df_dur.columns if "aufenthalt" in c.lower()), None)
+        st.markdown(f"""
+<div style="background:#fff;border-radius:14px;padding:18px 16px;
+            box-shadow:0 2px 12px rgba(0,0,0,0.07);">
+  <div style="font-size:1.8rem;margin-bottom:8px;">{ev["icon"]}</div>
+  <div style="font-size:0.82rem;font-weight:800;color:#1A1A1A;margin-bottom:6px;
+              line-height:1.3;">{ev["name"]}</div>
+  <div style="display:inline-block;background:{badge_color}18;color:{badge_color};
+              border-radius:8px;padding:2px 10px;font-size:0.72rem;
+              font-weight:700;margin-bottom:8px;">{badge}</div>
+  <div style="font-size:0.76rem;color:#64748b;line-height:1.5;">{ev["desc"]}</div>
+</div>
+""", unsafe_allow_html=True)
 
-        df_ov[ov_col]   = pd.to_numeric(df_ov[ov_col],   errors="coerce")
-        df_dur[dur_col] = pd.to_numeric(df_dur[dur_col], errors="coerce")
-
-        ov_annual  = df_ov.groupby("Jahr")[ov_col].sum().reset_index()
-        dur_annual = df_dur.groupby("Jahr")[dur_col].mean().reset_index()
-
-        fig_ov = go.Figure()
-        fig_ov.add_trace(go.Bar(
-            x=ov_annual["Jahr"], y=ov_annual[ov_col],
-            name="Overnight stays", marker_color=CITY_PURPLE, opacity=0.8,
-            hovertemplate="%{x}: %{y:,}<extra>Overnight stays</extra>",
-        ))
-        fig_ov.add_trace(go.Scatter(
-            x=dur_annual["Jahr"], y=dur_annual[dur_col],
-            mode="lines+markers", name="Avg stay (nights)",
-            line=dict(color=MD_ORANGE, width=2),
-            yaxis="y2",
-            hovertemplate="%{x}: %{y:.1f} nights<extra></extra>",
-        ))
-        fig_ov.update_layout(
-            template=PLOTLY_TEMPLATE,
-            yaxis=dict(title="Overnight stays", tickformat=",d"),
-            yaxis2=dict(title="Avg nights", overlaying="y", side="right"),
-            legend=dict(orientation="h", y=-0.2),
-            margin=dict(l=50, r=60, t=20, b=60), height=300,
-        )
-        st.plotly_chart(fig_ov, use_container_width=True)
-    except Exception as e:
-        st.info(f"Overnight stays data unavailable: {e}")
-
-st.markdown(insight_box(
-    "Summer months (July–August) see peak arrivals. International visitors account for roughly "
-    "30–35% of total arrivals, with the share growing steadily. "
-    "Average stays are short (1.5–2 nights), typical of a city-break destination — "
-    "most visitors come for events, the Dom, and Hundertwasserhaus."
-), unsafe_allow_html=True)
+st.caption("Source: Landeshauptstadt Magdeburg — Events calendar (magdeburg.de/veranstaltungen)")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SECTION 3: KEY ATTRACTIONS
+# SECTION 2: KEY ATTRACTIONS
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown(section_header("Key Attractions", color=CITY_PURPLE), unsafe_allow_html=True)
 
@@ -332,7 +199,7 @@ for idx, attr in enumerate(ATTRACTIONS):
 st.caption("Visitor tips: most attractions are accessible by tram from Magdeburg Hauptbahnhof · tourismusmagdeburg.de")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SECTION 4: MUSEUM & LIBRARY VISITORS
+# SECTION 3: CULTURAL VENUES — VISITOR TRENDS
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown(section_header("Cultural Venues — Visitor Trends", color=CITY_PURPLE), unsafe_allow_html=True)
 
@@ -403,59 +270,5 @@ st.markdown(insight_box(
     "Both venues are free or low-cost, making them key cultural assets for all residents."
 ), unsafe_allow_html=True)
 st.caption("Source: KISS-MD / Stadtbibliothek Magdeburg · Gruson-Gewächshäuser")
-
-# ─────────────────────────────────────────────────────────────────────────────
-# SECTION 5: UPCOMING EVENTS
-# ─────────────────────────────────────────────────────────────────────────────
-st.markdown(section_header("Upcoming Events in Magdeburg", color=CITY_PURPLE), unsafe_allow_html=True)
-
-EVENTS = [
-    {"name": "Stadtfest Magdeburg",      "icon": "🎉", "month": 6,    "day": 14,
-     "desc": "City festival — music, food, and culture at the Elbe riverside."},
-    {"name": "Magdeburg Marathon",        "icon": "🏃", "month": 4,    "day": 20,
-     "desc": "Annual city marathon through Magdeburg's historic districts."},
-    {"name": "Kulturnacht",               "icon": "🎭", "month": 10,   "day": 12,
-     "desc": "One night, dozens of venues — museums, galleries, theatres open until midnight."},
-    {"name": "Altstadtfest",             "icon": "🏰", "month": 8,    "day": 23,
-     "desc": "Medieval old-town festival at the Dom and Hundertwasserhaus."},
-    {"name": "Weihnachtsmarkt",           "icon": "🎄", "month": 11,   "day": 24,
-     "desc": "Magdeburg Christmas market at the Cathedral square — one of Germany's oldest."},
-    {"name": "City Council Open Session", "icon": "🏛️", "month": None, "day": None,
-     "desc": "Stadtrat public meeting — citizens can attend and observe."},
-]
-
-upcoming = []
-for ev in EVENTS:
-    ev_date = next_first_monday() if ev["month"] is None else next_occurrence(ev["month"], ev["day"])
-    upcoming.append({**ev, "date": ev_date})
-upcoming.sort(key=lambda x: x["date"])
-
-ev_cols = st.columns(min(len(upcoming), 4))
-for i, ev in enumerate(upcoming[:4]):
-    with ev_cols[i]:
-        days_away = (ev["date"] - _today).days
-        if days_away == 0:
-            badge, badge_color = "Today!", "#C0392B"
-        elif days_away <= 7:
-            badge, badge_color = f"In {days_away} days", "#E65100"
-        elif days_away <= 30:
-            badge, badge_color = f"In {days_away} days", "#F59E0B"
-        else:
-            badge, badge_color = ev["date"].strftime("%d %b %Y"), "#64748b"
-
-        st.markdown(f"""
-<div style="background:#fff;border-radius:14px;padding:18px 16px;
-            box-shadow:0 2px 12px rgba(0,0,0,0.07);">
-  <div style="font-size:1.8rem;margin-bottom:8px;">{ev["icon"]}</div>
-  <div style="font-size:0.82rem;font-weight:800;color:#1A1A1A;margin-bottom:6px;
-              line-height:1.3;">{ev["name"]}</div>
-  <div style="display:inline-block;background:{badge_color}18;color:{badge_color};
-              border-radius:8px;padding:2px 10px;font-size:0.72rem;
-              font-weight:700;margin-bottom:8px;">{badge}</div>
-  <div style="font-size:0.76rem;color:#64748b;line-height:1.5;">{ev["desc"]}</div>
-</div>
-""", unsafe_allow_html=True)
-
-st.caption("Source: Landeshauptstadt Magdeburg — Events calendar (magdeburg.de/veranstaltungen)")
 
 
